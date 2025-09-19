@@ -1,0 +1,8 @@
+// Auto-generated from deploy_mock_tokens.ts
+export const MOCK_TOKENS = {
+  MOCK_USDC: "0x81247a6D2bcBe52761a16DdFe8E01c8bEFd76F71",
+  MOCK_DAI: "0x5713CC142EEE3Bd4380f2788Cce377a272f4A5c1",
+} as const;
+
+export const MOCK_USDC_ADDRESS = "0x81247a6D2bcBe52761a16DdFe8E01c8bEFd76F71";
+export const MOCK_DAI_ADDRESS = "0x5713CC142EEE3Bd4380f2788Cce377a272f4A5c1";
