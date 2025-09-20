@@ -269,6 +269,11 @@ export default function BlindEscrowPage() {
       return;
     }
     
+    if (!assetToken || !payToken || assetToken === "" || payToken === "") {
+      console.log("Token addresses not available, skipping balance load");
+      return;
+    }
+    
     try {
       const userAddress = accounts[0];
       console.log("Loading balances for:", { userAddress, assetToken, payToken });
@@ -545,7 +550,7 @@ export default function BlindEscrowPage() {
           </div>
         </div>
       )}
-
+      
       {/* Mock Token Info */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <h3 className="font-semibold text-blue-800 mb-2"> Mock Tokens (Sepolia)</h3>
@@ -566,8 +571,8 @@ export default function BlindEscrowPage() {
 
       {/* Create Deal Section - Only for Seller and when no deal exists */}
       {userRole === 'seller' && !dealId && (
-        <div className="p-6 border rounded-lg space-y-4 bg-gray-50">
-          <h2 className="text-xl font-semibold">1) Create Deal (Seller)</h2>
+      <div className="p-6 border rounded-lg space-y-4 bg-gray-50">
+        <h2 className="text-xl font-semibold">1) Create Deal (Seller)</h2>
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
           <p className="text-sm text-yellow-800">
             ⚠️ <strong>Lưu ý:</strong> Trước khi tạo deal, bạn cần approve MockUSDC cho BlindEscrow contract.
@@ -638,25 +643,25 @@ export default function BlindEscrowPage() {
             {escrow.loading ? "Approving..." : "Approve Token"}
           </button>
           
-          <button 
-            className="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:bg-gray-400" 
-            onClick={create} 
-            disabled={escrow.loading}
-          >
-            {escrow.loading ? "Creating..." : "Create Deal"}
-          </button>
+        <button 
+          className="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:bg-gray-400" 
+          onClick={create} 
+          disabled={escrow.loading}
+        >
+          {escrow.loading ? "Creating..." : "Create Deal"}
+        </button>
         </div>
         {dealId && (
           <div className="p-3 bg-green-100 rounded-lg">
             <strong>Deal ID:</strong> {dealId}
           </div>
         )}
-        </div>
+      </div>
       )}
 
       {/* Submit Prices Section - For both Seller and Buyer */}
       {dealId && (userRole === 'seller' || userRole === 'buyer') && (
-        <div className="p-6 border rounded-lg space-y-4 bg-blue-50">
+      <div className="p-6 border rounded-lg space-y-4 bg-blue-50">
           <h2 className="text-xl font-semibold">2) Set Threshold & Submit Encrypted Prices</h2>
         
         {/* Threshold Section - Only for Seller */}
@@ -690,17 +695,17 @@ export default function BlindEscrowPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Seller Ask Section */}
           {userRole === 'seller' && (
-            <div className="space-y-3">
-              <h3 className="font-medium">Seller Ask (hidden)</h3>
+          <div className="space-y-3">
+            <h3 className="font-medium">Seller Ask (hidden)</h3>
             <input 
               className="w-full border border-gray-300 rounded-lg px-3 py-2" 
               value={ask} 
               onChange={e=>setAsk(e.target.value)} 
             />
             <div className="space-y-2">
-              <button 
-                className="w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-400" 
-                onClick={doAsk} 
+            <button 
+              className="w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-400" 
+              onClick={doAsk} 
                 disabled={escrow.loading || dealId==null || !hasThreshold}
               >
                 {escrow.loading ? "Submitting..." : "Submit Ask Only"}
@@ -708,18 +713,18 @@ export default function BlindEscrowPage() {
               <button 
                 className="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:bg-gray-400" 
                 onClick={doAskWithThreshold} 
-                disabled={escrow.loading || dealId==null}
-              >
+              disabled={escrow.loading || dealId==null}
+            >
                 {escrow.loading ? "Submitting..." : "Submit Ask + Threshold"}
-              </button>
-            </div>
+            </button>
+          </div>
             </div>
           )}
           
           {/* Buyer Bid Section */}
           {userRole === 'buyer' && (
-            <div className="space-y-3">
-              <h3 className="font-medium">Buyer Bid (hidden)</h3>
+          <div className="space-y-3">
+            <h3 className="font-medium">Buyer Bid (hidden)</h3>
             <input 
               className="w-full border border-gray-300 rounded-lg px-3 py-2" 
               value={bid} 
@@ -732,17 +737,17 @@ export default function BlindEscrowPage() {
             >
               {escrow.loading ? "Submitting..." : "Submit Bid"}
             </button>
-            </div>
+          </div>
           )}
         </div>
-        </div>
+      </div>
       )}
 
 
       {/* Reveal & Settle Section - Always show for debugging */}
       {dealId && (
-        <div className="p-6 border rounded-lg space-y-4 bg-yellow-50">
-          <h2 className="text-xl font-semibold">3) Reveal & Settle</h2>
+      <div className="p-6 border rounded-lg space-y-4 bg-yellow-50">
+        <h2 className="text-xl font-semibold">3) Reveal & Settle</h2>
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
           <p className="text-sm text-blue-800">
             🔐 <strong>FHEVM Relayer Required:</strong> Reveal function trả về encrypted result.
@@ -844,7 +849,7 @@ export default function BlindEscrowPage() {
             <strong>Error:</strong> {escrow.error}
           </div>
         )}
-        </div>
+      </div>
       )}
 
       <div className="p-4 bg-gray-100 rounded-lg text-sm text-gray-600">

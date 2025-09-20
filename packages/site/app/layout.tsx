@@ -1,34 +1,22 @@
-import type { Metadata } from "next";
-import "./globals.css";
-import { Providers } from "./providers";
-import Image from "next/image";
+'use client';
 
-export const metadata: Metadata = {
-  title: "Zama FHEVM SDK Quickstart",
-  description: "Zama FHEVM SDK Quickstart app",
-};
+import { WagmiProvider } from 'wagmi'
+import { wagmiConfig } from '@/config/wagmi'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import './globals.css'
+import { ReactNode, useState } from 'react'
 
-export default async function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: ReactNode }) {
+  const [qc] = useState(() => new QueryClient())
   return (
     <html lang="en">
-      <body className={`zama-bg text-foreground antialiased`}>
-        <div className="fixed inset-0 w-full h-full zama-bg z-[-20] min-w-[850px]"></div>
-        <main className="flex flex-col max-w-screen-lg mx-auto pb-20 min-w-[850px]">
-          <nav className="flex w-full px-3 md:px-0 h-fit py-10 justify-between items-center">
-            <Image
-              src="/zama-logo.svg"
-              alt="Zama Logo"
-              width={120}
-              height={120}
-            />
-          </nav>
-          <Providers>{children}</Providers>
-        </main>
+      <body className="text-foreground antialiased">
+        <WagmiProvider config={wagmiConfig}>
+          <QueryClientProvider client={qc}>
+            {children}
+          </QueryClientProvider>
+        </WagmiProvider>
       </body>
     </html>
-  );
+  )
 }
