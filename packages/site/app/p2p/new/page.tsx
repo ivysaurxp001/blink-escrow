@@ -7,15 +7,6 @@ import { Input } from "@/components/ui/Input";
 import WalletButton from "@/components/WalletButton";
 import Link from "next/link";
 
-// Extend Window interface for MetaMask
-declare global {
-  interface Window {
-    ethereum?: {
-      request: (args: { method: string; params?: any[] }) => Promise<any>;
-    };
-  }
-}
-
 export default function NewP2PDealPage() {
   const [formData, setFormData] = useState({
     buyerAddress: "",
@@ -23,58 +14,6 @@ export default function NewP2PDealPage() {
     assetToken: "0x5f3CD01981EFB5C500d20be535C68B980cfFC414", // MockUSDC
     payToken: "0xFaba8eFb5d502baf7Cd3832e0AF95EF84a496738", // MockDAI
   });
-  const [isConnected, setIsConnected] = useState(false);
-  const [walletAddress, setWalletAddress] = useState<string>("");
-
-  const connectWallet = async () => {
-    try {
-      // Check if we're in browser environment
-      if (typeof window === 'undefined') {
-        alert('Please open this page in a browser to connect your wallet.');
-        return;
-      }
-
-      // Check if MetaMask is installed
-      if (!window.ethereum) {
-        alert('MetaMask is not installed. Please install MetaMask extension to connect your wallet.');
-        return;
-      }
-
-      // Check if MetaMask is unlocked
-      const accounts = await window.ethereum.request({
-        method: 'eth_accounts',
-      });
-
-      if (accounts.length === 0) {
-        // Request account access
-        const newAccounts = await window.ethereum.request({
-          method: 'eth_requestAccounts',
-        });
-        
-        if (newAccounts.length > 0) {
-          setIsConnected(true);
-          setWalletAddress(newAccounts[0]);
-          console.log('Connected to wallet:', newAccounts[0]);
-        }
-      } else {
-        // Already connected
-        setIsConnected(true);
-        setWalletAddress(accounts[0]);
-        console.log('Already connected to wallet:', accounts[0]);
-      }
-    } catch (error: any) {
-      console.error('Failed to connect wallet:', error);
-      
-      // More specific error messages
-      if (error.code === 4001) {
-        alert('Connection rejected by user. Please try again and approve the connection.');
-      } else if (error.code === -32002) {
-        alert('Connection request already pending. Please check MetaMask.');
-      } else {
-        alert(`Failed to connect wallet: ${error.message || 'Unknown error'}`);
-      }
-    }
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
