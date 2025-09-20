@@ -6,6 +6,11 @@ import path from 'path';
 
 console.log('🚀 Starting full deployment process on Sepolia...\n');
 
+// Global variables to store addresses
+let blindEscrowAddress;
+let mockUSDCAddress;
+let mockDAIAddress;
+
 // Step 1: Deploy BlindEscrow contract
 console.log('📦 Step 1: Deploying BlindEscrow contract on Sepolia...');
 try {
@@ -20,7 +25,7 @@ try {
   if (!addressMatch) {
     throw new Error('Could not extract contract address from deployment output');
   }
-  const blindEscrowAddress = addressMatch[1];
+  blindEscrowAddress = addressMatch[1];
   console.log(`✅ BlindEscrow deployed at: ${blindEscrowAddress}\n`);
   
 } catch (error) {
@@ -48,8 +53,8 @@ try {
     throw new Error('Could not extract token addresses from deployment output');
   }
   
-  const mockUSDCAddress = usdcMatch[1];
-  const mockDAIAddress = daiMatch[1];
+  mockUSDCAddress = usdcMatch[1];
+  mockDAIAddress = daiMatch[1];
   
   console.log(`✅ MockUSDC deployed at: ${mockUSDCAddress}`);
   console.log(`✅ MockDAI deployed at: ${mockDAIAddress}\n`);
@@ -75,15 +80,53 @@ try {
 // Step 4: Update frontend config
 console.log('⚙️ Step 4: Updating frontend configuration...');
 try {
+  // Validate that all addresses are set
+  if (!blindEscrowAddress) {
+    throw new Error('blindEscrowAddress is not defined');
+  }
+  if (!mockUSDCAddress) {
+    throw new Error('mockUSDCAddress is not defined');
+  }
+  if (!mockDAIAddress) {
+    throw new Error('mockDAIAddress is not defined');
+  }
+  
   // Read current config
   const configPath = path.join('..', 'site', 'config.ts');
   let configContent = readFileSync(configPath, 'utf8');
   
-  // Update BlindEscrow address
+  
+  // Update BlindEscrow address - try multiple approaches
+  const oldContent = configContent;
+  
+  // Try regex first
   configContent = configContent.replace(
-    /BLIND_ESCROW_ADDR: process\.env\.NEXT_PUBLIC_BLIND_ESCROW_ADDR \|\| "0x0000000000000000000000000000000000000000"/,
+    /BLIND_ESCROW_ADDR: process\.env\.NEXT_PUBLIC_BLIND_ESCROW_ADDR \|\| "0x[a-fA-F0-9]{40}"/,
     `BLIND_ESCROW_ADDR: process.env.NEXT_PUBLIC_BLIND_ESCROW_ADDR || "${blindEscrowAddress}"`
   );
+  
+  // If no changes, try alternative regex
+  if (oldContent === configContent) {
+    configContent = configContent.replace(
+      /BLIND_ESCROW_ADDR: process\.env\.NEXT_PUBLIC_BLIND_ESCROW_ADDR \|\| "[^"]*"/,
+      `BLIND_ESCROW_ADDR: process.env.NEXT_PUBLIC_BLIND_ESCROW_ADDR || "${blindEscrowAddress}"`
+    );
+  }
+  
+  // If still no changes, do manual line replacement
+  if (oldContent === configContent) {
+    console.log('⚠️ Regex failed, using manual replacement');
+    const lines = configContent.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].includes('BLIND_ESCROW_ADDR:')) {
+        lines[i] = `  BLIND_ESCROW_ADDR: process.env.NEXT_PUBLIC_BLIND_ESCROW_ADDR || "${blindEscrowAddress}", // Deployed on Sepolia`;
+        break;
+      }
+    }
+    configContent = lines.join('\n');
+  }
+  
+  console.log('✅ Config content updated');
   
   writeFileSync(configPath, configContent);
   console.log(`✅ Updated config.ts with BlindEscrow address: ${blindEscrowAddress}`);

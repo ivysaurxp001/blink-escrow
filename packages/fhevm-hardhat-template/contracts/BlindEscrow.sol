@@ -190,6 +190,8 @@ contract BlindEscrow is Ownable {
         ebool cond1 = FHE.le(d.encBid, askPlusTh); // bid <= ask + th
         ebool cond2 = FHE.le(d.encAsk, bidPlusTh); // ask <= bid + th
         matched = FHE.and(cond1, cond2);
+        
+        return matched;
     }
 
 

@@ -1,8 +1,10 @@
-// Auto-generated from deploy_mock_tokens.ts
+// Auto-generated from deploy_all_sepolia.mjs
+// This file will be updated automatically when you run: npm run deploy:all:sepolia
+
 export const MOCK_TOKENS = {
-  MOCK_USDC: "0x81247a6D2bcBe52761a16DdFe8E01c8bEFd76F71",
-  MOCK_DAI: "0x5713CC142EEE3Bd4380f2788Cce377a272f4A5c1",
+  MOCK_USDC: "0x5f3CD01981EFB5C500d20be535C68B980cfFC414",
+  MOCK_DAI: "0xFaba8eFb5d502baf7Cd3832e0AF95EF84a496738",
 } as const;
 
-export const MOCK_USDC_ADDRESS = "0x81247a6D2bcBe52761a16DdFe8E01c8bEFd76F71";
-export const MOCK_DAI_ADDRESS = "0x5713CC142EEE3Bd4380f2788Cce377a272f4A5c1";
+export const MOCK_USDC_ADDRESS = "0x5f3CD01981EFB5C500d20be535C68B980cfFC414";
+export const MOCK_DAI_ADDRESS = "0xFaba8eFb5d502baf7Cd3832e0AF95EF84a496738";
