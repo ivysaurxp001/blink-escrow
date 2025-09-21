@@ -10,7 +10,7 @@ import Link from "next/link";
 
 export default function HomePage() {
   const { openDeals, loading, refetch } = useDealsQuery();
-
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
       {/* Animated background */}
@@ -33,7 +33,7 @@ export default function HomePage() {
             <div className="flex items-center space-x-4">
               <h1 className="text-4xl md:text-5xl font-black text-white">
                 Blind <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">Escrow</span>
-              </h1>
+          </h1>
             </div>
             <WalletButton />
           </div>

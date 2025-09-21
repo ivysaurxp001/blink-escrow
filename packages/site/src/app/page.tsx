@@ -7,6 +7,7 @@ import { DealInfo, DealState } from "@/lib/types";
 import { useBlindEscrow } from "@/hooks/useBlindEscrow";
 import { useAccount } from "wagmi";
 import Link from "next/link";
+import { MOCK_TOKENS } from "@/abi/MockTokenAddresses";
 
 export default function HomePage() {
   const { getDeal } = useBlindEscrow();
@@ -23,9 +24,9 @@ export default function HomePage() {
           id: 1,
           seller: "0x963a2d0BE2eb5d785C6E73ec904fcE8d65691773" as `0x${string}`,
           buyer: "0xd8FF12Afb233f53666a22373e864c3e23DcF7495" as `0x${string}`,
-          assetToken: "0x5f3CD01981EFB5C500d20be535C68B980cfFC414" as `0x${string}`,
+          assetToken: MOCK_TOKENS.MOCK_USDC as `0x${string}`,
           assetAmount: BigInt("1000000000"), // 1000 USDC (6 decimals)
-          payToken: "0xFaba8eFb5d502baf7Cd3832e0AF95EF84a496738" as `0x${string}`,
+          payToken: MOCK_TOKENS.MOCK_DAI as `0x${string}`,
           hasAsk: true,
           hasBid: true,
           hasThreshold: true,
@@ -35,9 +36,9 @@ export default function HomePage() {
           id: 2,
           seller: "0x963a2d0BE2eb5d785C6E73ec904fcE8d65691773" as `0x${string}`,
           buyer: "0xd8FF12Afb233f53666a22373e864c3e23DcF7495" as `0x${string}`,
-          assetToken: "0x5f3CD01981EFB5C500d20be535C68B980cfFC414" as `0x${string}`,
+          assetToken: MOCK_TOKENS.MOCK_USDC as `0x${string}`,
           assetAmount: BigInt("555000000"), // 555 USDC (6 decimals)
-          payToken: "0xFaba8eFb5d502baf7Cd3832e0AF95EF84a496738" as `0x${string}`,
+          payToken: MOCK_TOKENS.MOCK_DAI as `0x${string}`,
           hasAsk: false,
           hasBid: false,
           hasThreshold: false,

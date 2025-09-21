@@ -160,7 +160,7 @@ try {
   console.log(`✅ Updated config.ts with BlindEscrow address: ${blindEscrowAddress}`);
   
   // Update MockToken addresses
-  const mockTokenPath = path.join('..', 'site', 'abi', 'MockTokenAddresses.ts');
+  const mockTokenPath = path.join('..', 'site', 'src', 'abi', 'MockTokenAddresses.ts');
   const mockTokenContent = `// Auto-generated from deploy_all_sepolia.mjs
 // This file will be updated automatically when you run: npm run deploy:all:sepolia
 
@@ -199,8 +199,42 @@ export const MOCK_DAI_ADDR     = CONTRACTS["11155111"]?.MockDAI ?? "";
   process.exit(1);
 }
 
-// Step 5: Create .env.local template
-console.log('📝 Step 5: Creating .env.local template...');
+// Step 5: Create deployment.json
+console.log('📝 Step 5: Creating deployment.json...');
+try {
+  const deploymentData = {
+    network: "sepolia",
+    chainId: "11155111",
+    deployment: {
+      timestamp: new Date().toISOString(),
+      contracts: {
+        BlindEscrow: {
+          address: blindEscrowAddress,
+          explorer: `https://sepolia.etherscan.io/address/${blindEscrowAddress}`
+        },
+        MockUSDC: {
+          address: mockUSDCAddress,
+          explorer: `https://sepolia.etherscan.io/address/${mockUSDCAddress}`
+        },
+        MockDAI: {
+          address: mockDAIAddress,
+          explorer: `https://sepolia.etherscan.io/address/${mockDAIAddress}`
+        }
+      }
+    }
+  };
+
+  const deploymentPath = path.join('..', 'site', 'public', 'deployment.json');
+  writeFileSync(deploymentPath, JSON.stringify(deploymentData, null, 2));
+  console.log('✅ Created deployment.json');
+  
+} catch (error) {
+  console.error('❌ Failed to create deployment.json:', error.message);
+  process.exit(1);
+}
+
+// Step 6: Create .env.local template
+console.log('📝 Step 6: Creating .env.local template...');
 try {
   const envTemplate = `# Chain Configuration
 NEXT_PUBLIC_CHAIN_ID=11155111

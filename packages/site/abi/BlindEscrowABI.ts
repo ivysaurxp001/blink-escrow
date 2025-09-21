@@ -6,6 +6,27 @@ export const BlindEscrowABI = {
     "type": "constructor"
   },
   {
+    "inputs": [],
+    "name": "NotBound",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint32",
+        "name": "diff",
+        "type": "uint32"
+      },
+      {
+        "internalType": "uint32",
+        "name": "threshold",
+        "type": "uint32"
+      }
+    ],
+    "name": "NotMatched",
+    "type": "error"
+  },
+  {
     "inputs": [
       {
         "internalType": "address",
@@ -209,6 +230,37 @@ export const BlindEscrowABI = {
       },
       {
         "indexed": false,
+        "internalType": "uint32",
+        "name": "ask",
+        "type": "uint32"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint32",
+        "name": "bid",
+        "type": "uint32"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint32",
+        "name": "threshold",
+        "type": "uint32"
+      }
+    ],
+    "name": "RevealedBound",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "dealId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
         "internalType": "address",
         "name": "seller",
         "type": "address"
@@ -263,6 +315,11 @@ export const BlindEscrowABI = {
       {
         "internalType": "uint32",
         "name": "bidClear",
+        "type": "uint32"
+      },
+      {
+        "internalType": "uint32",
+        "name": "thresholdClear",
         "type": "uint32"
       }
     ],
@@ -443,14 +500,34 @@ export const BlindEscrowABI = {
         "type": "bool"
       },
       {
-        "internalType": "enum BlindEscrow.DealState",
-        "name": "state",
-        "type": "uint8"
+        "internalType": "uint32",
+        "name": "askClearBound",
+        "type": "uint32"
+      },
+      {
+        "internalType": "uint32",
+        "name": "bidClearBound",
+        "type": "uint32"
+      },
+      {
+        "internalType": "uint32",
+        "name": "thresholdClearBound",
+        "type": "uint32"
+      },
+      {
+        "internalType": "bool",
+        "name": "hasBound",
+        "type": "bool"
       },
       {
         "internalType": "bytes32",
         "name": "pricesCommitHash",
         "type": "bytes32"
+      },
+      {
+        "internalType": "enum BlindEscrow.DealState",
+        "name": "state",
+        "type": "uint8"
       }
     ],
     "stateMutability": "view",
@@ -764,16 +841,6 @@ export const BlindEscrowABI = {
         "internalType": "uint256",
         "name": "dealId",
         "type": "uint256"
-      },
-      {
-        "internalType": "uint32",
-        "name": "askClear",
-        "type": "uint32"
-      },
-      {
-        "internalType": "uint32",
-        "name": "bidClear",
-        "type": "uint32"
       }
     ],
     "name": "settle",

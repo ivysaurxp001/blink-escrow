@@ -11,6 +11,9 @@ import WalletButton from "@/components/WalletButton";
 import SimpleFHE from "../../src/components/SimpleFHE";
 import FHETest from "../../src/components/FHETest";
 import Link from "next/link";
+import { MOCK_TOKENS } from "@/abi/MockTokenAddresses";
+import { DeploymentInfo } from "@/components/DeploymentInfo";
+import { TokenBalance } from "@/components/TokenBalance";
 
 export default function MarketplacePage() {
   const { openDeals, loading, error, refetch } = useDealsQuery();
@@ -21,8 +24,8 @@ export default function MarketplacePage() {
   const [currentStep, setCurrentStep] = useState<string>("");
   const [formData, setFormData] = useState({
     assetAmount: "",
-    assetToken: "0x5f3CD01981EFB5C500d20be535C68B980cfFC414", // MockUSDC
-    payToken: "0xFaba8eFb5d502baf7Cd3832e0AF95EF84a496738", // MockDAI
+    assetToken: MOCK_TOKENS.MOCK_USDC, // MockUSDC
+    payToken: MOCK_TOKENS.MOCK_DAI, // MockDAI
     askAmount: "",
     threshold: "",
   });
@@ -34,6 +37,9 @@ export default function MarketplacePage() {
     setCurrentStep("Preparing transaction...");
     
     try {
+      console.log("🔍 Form data before creating deal:", formData);
+      console.log("🔍 Asset amount as BigInt:", BigInt(formData.assetAmount));
+      
       setCurrentStep("Step 1: Approving asset token...");
       const result = await createOpenWithAsk({
         assetToken: formData.assetToken as `0x${string}`,
@@ -52,8 +58,8 @@ export default function MarketplacePage() {
       setCreateSuccess(true);
       setFormData({ 
         assetAmount: "",
-        assetToken: "0x5f3CD01981EFB5C500d20be535C68B980cfFC414",
-        payToken: "0xFaba8eFb5d502baf7Cd3832e0AF95EF84a496738",
+        assetToken: MOCK_TOKENS.MOCK_USDC,
+        payToken: MOCK_TOKENS.MOCK_DAI,
         askAmount: "",
         threshold: "",
       }); // Reset form
@@ -298,6 +304,16 @@ export default function MarketplacePage() {
             </CardContent>
           </Card>
         )}
+
+        {/* Token Portfolio */}
+        <div className="mb-8">
+          <TokenBalance />
+        </div>
+
+        {/* Deployment Information */}
+        <div className="mb-8">
+          <DeploymentInfo />
+        </div>
 
         {/* Deals Grid */}
         {loading ? (

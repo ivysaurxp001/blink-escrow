@@ -3,7 +3,7 @@
 import { useAccount, useConnect, useDisconnect, useSwitchChain } from 'wagmi'
 import { injected } from 'wagmi/connectors'
 import { sepolia } from 'wagmi/chains'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState, useEffect } from 'react'
 
 export default function WalletButton() {
   const { address, isConnected, chain } = useAccount()
@@ -11,9 +11,14 @@ export default function WalletButton() {
   const { disconnectAsync } = useDisconnect()
   const { switchChainAsync } = useSwitchChain()
   const [busy, setBusy] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const injectedConnector = useMemo(() => {
-    return connectors.find(c => c.id === injected({}).id)
+    return connectors.find(c => c.type === 'injected')
   }, [connectors])
 
   const connectWallet = useCallback(async () => {
@@ -36,7 +41,7 @@ export default function WalletButton() {
       }
 
       // 5) Đổi sang Sepolia nếu đang ở chain khác
-      if (!res.chain || res.chain.id !== sepolia.id) {
+      if (!res.chainId || res.chainId !== sepolia.id) {
         await switchChainAsync({ chainId: sepolia.id })
       }
     } catch (error: any) {
@@ -60,6 +65,16 @@ export default function WalletButton() {
       setBusy(false)
     }
   }, [disconnectAsync])
+
+  // Prevent hydration mismatch by not rendering until mounted
+  if (!mounted) {
+    return (
+      <div className="inline-flex items-center px-6 py-3 rounded-full bg-gray-500/20 backdrop-blur-sm border border-gray-500/30 text-white">
+        <div className="w-4 h-4 mr-2 bg-gray-400 rounded animate-pulse"></div>
+        <span className="text-sm font-medium">Loading...</span>
+      </div>
+    )
+  }
 
   if (isConnected) {
     return (

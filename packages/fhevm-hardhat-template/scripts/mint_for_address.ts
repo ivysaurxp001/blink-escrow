@@ -4,9 +4,9 @@ async function main() {
   const [deployer] = await ethers.getSigners();
   console.log("Deployer:", deployer.address);
 
-  // Địa chỉ token từ addresses.json
-  const MOCK_USDC_ADDRESS = "0xBf94a31cf41be94810B543296036eE698CCF0d1F"; // Update với address mới nhất
-  const MOCK_DAI_ADDRESS = "0x8190e817d4e041026F2F32304006aF6dB1873421";   // Update với address mới nhất
+  // Địa chỉ token từ deployment mới nhất
+  const MOCK_USDC_ADDRESS = "0x72D4e300767b2Bb95250907b1B177A0Fbff3C273"; // MockUSDC mới
+  const MOCK_DAI_ADDRESS = "0xEFf11B6A1104F198b791EAE158Fdf3c62185bf2E";   // MockDAI mới
   
   // Địa chỉ account cần mint (từ environment variable hoặc hardcode)
   const targetAddress = process.env.TARGET_ADDRESS || "0xd8FF12Afb233f53666a22373e864c3e23DcF7495";

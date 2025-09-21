@@ -42,9 +42,15 @@ contract BlindEscrow is Ownable {
         euint32 encThreshold;     // ngưỡng chênh lệch cho phép (tuyệt đối)
         bool    hasEncThreshold;  // NEW
 
+        // Bound plaintext values (after reveal)
+        uint32  askClearBound;
+        uint32  bidClearBound;
+        uint32  thresholdClearBound;
+        bool    hasBound;            // NEW
+        bytes32 pricesCommitHash;    // hash(askClear,bidClear,thresholdClear) để ràng buộc settle
+
         // State
         DealState state;
-        bytes32 pricesCommitHash; // hash(askClear,bidClear) để ràng buộc settle
     }
 
     uint256 public nextDealId;
@@ -58,8 +64,13 @@ contract BlindEscrow is Ownable {
     event BuyerLocked(uint256 indexed dealId, address indexed buyer); // NEW
     event Ready(uint256 indexed dealId);
     event Revealed(uint256 indexed dealId, bool matched, uint32 askClear, uint32 bidClear);
+    event RevealedBound(uint256 indexed dealId, uint32 ask, uint32 bid, uint32 threshold);
     event Settled(uint256 indexed dealId, address seller, address buyer, uint256 assetAmount, uint256 paid);
     event Canceled(uint256 indexed dealId);
+
+    // Custom errors
+    error NotBound();
+    error NotMatched(uint32 diff, uint32 threshold);
 
     constructor() Ownable(msg.sender) {}
 
@@ -365,45 +376,52 @@ contract BlindEscrow is Ownable {
     }
 
     /**
-     * @dev Bind kết quả sau khi reveal: người gọi truyền askClear/bidClear (đã biết sau revealMatch).
-     * Lưu hash để chống thay đổi về sau khi settle.
+     * @dev Bind kết quả sau khi reveal: người gọi truyền askClear/bidClear/thresholdClear (đã biết sau revealMatch).
+     * Lưu plaintext và hash để chống thay đổi về sau khi settle.
      */
-    function bindRevealed(uint256 dealId, uint32 askClear, uint32 bidClear) external {
+    function bindRevealed(uint256 dealId, uint32 askClear, uint32 bidClear, uint32 thresholdClear) external {
         Deal storage d = deals[dealId];
         require(d.state == DealState.Ready, "not ready");
 
-        // Gắn hash để xác nhận settle đúng cặp giá đã reveal
-        d.pricesCommitHash = keccak256(abi.encodePacked(askClear, bidClear));
+        // Lưu plaintext đã reveal
+        d.askClearBound        = askClear;
+        d.bidClearBound        = bidClear;
+        d.thresholdClearBound  = thresholdClear;
+        d.hasBound             = true;
+
+        // Commit tất cả để chống thay đổi
+        d.pricesCommitHash = keccak256(abi.encodePacked(askClear, bidClear, thresholdClear));
+
+        emit RevealedBound(dealId, askClear, bidClear, thresholdClear);
     }
 
     /**
      * @dev settle giao dịch nếu matched: chuyển asset → buyer, payToken(askClear) → seller.
      * Yêu cầu:
-     *  - Đã bindRevealed với chính cặp (askClear,bidClear) này
-     *  - matched == true theo cùng điều kiện homomorphic
+     *  - Đã bindRevealed với đầy đủ askClear/bidClear/thresholdClear
+     *  - matched == true theo điều kiện |bid - ask| <= threshold
      *  - buyer đã approve payToken cho contract ít nhất askClear
      */
-    function settle(uint256 dealId, uint32 askClear, uint32 bidClear) external {
+    function settle(uint256 dealId) external {
         Deal storage d = deals[dealId];
         require(d.state == DealState.Ready, "not ready");
-        require(d.pricesCommitHash == keccak256(abi.encodePacked(askClear, bidClear)), "prices not bound");
+        if (!d.hasBound) revert NotBound();
         require(msg.sender == d.buyer || msg.sender == d.seller, "not participant");
 
-        // Re-check matched trên-chain bằng plaintext vừa reveal để phòng sai lệch:
-        // |bid - ask| <= threshold
-        // Note: threshold được truyền vào từ client sau khi decrypt
-        // uint32 diff = (bidClear > askClear) ? (bidClear - askClear) : (askClear - bidClear);
-        // require(diff <= threshold, "not matched");
+        // Re-check match bằng plaintext đã bind:
+        uint32 a = d.askClearBound;
+        uint32 b = d.bidClearBound;
+        uint32 t = d.thresholdClearBound;
 
-        // Transfer: trả theo giá ask (ưu tiên seller)
-        // Buyer trả payToken -> seller
-        IERC20(d.payToken).transferFrom(d.buyer, d.seller, uint256(askClear));
-        // Escrow asset -> buyer
+        uint32 diff = a >= b ? (a - b) : (b - a);
+        if (diff > t) revert NotMatched(diff, t);
+
+        // Chuyển tiền (buyer trả theo ask)
+        IERC20(d.payToken).transferFrom(d.buyer, d.seller, uint256(a));
         IERC20(d.assetToken).transfer(d.buyer, d.assetAmount);
 
         d.state = DealState.Settled;
-
-        emit Settled(dealId, d.seller, d.buyer, d.assetAmount, uint256(askClear));
+        emit Settled(dealId, d.seller, d.buyer, d.assetAmount, uint256(a));
     }
 
     /**

@@ -4,6 +4,7 @@ import '@/polyfills';
 import { WagmiProvider } from 'wagmi'
 import { wagmiConfig } from '@/config/wagmi'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { DealValuesProvider } from '@/contexts/DealValuesContext'
 import './globals.css'
 import { ReactNode, useState } from 'react'
 
@@ -14,7 +15,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body className="text-foreground antialiased">
         <WagmiProvider config={wagmiConfig}>
           <QueryClientProvider client={qc}>
-            {children}
+            <DealValuesProvider>
+              {children}
+            </DealValuesProvider>
           </QueryClientProvider>
         </WagmiProvider>
       </body>

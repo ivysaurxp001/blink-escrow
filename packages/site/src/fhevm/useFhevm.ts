@@ -59,39 +59,32 @@ export function useFhevm() {
         console.log('📋 SepoliaConfig:', fhevmModule.SepoliaConfig);
         
         try {
-          // Try with SepoliaConfig first
-          const instance = await fhevmModule.createInstance(fhevmModule.SepoliaConfig);
-          console.log('✅ FHEVM instance created with SepoliaConfig');
+          // Use manual config with your RPC URL to avoid rate limits
+          console.log('🔗 Using manual config with your RPC...');
+          const manualConfig = {
+            chainId: 11155111,
+            kmsContractAddress: '0x1364cBBf2cDF5032C47d8226a6f6FBD2AFCDacAC',
+            aclContractAddress: '0x687820221192C5B662b25367F70076A37bc79b6c',
+            inputVerifierContractAddress: '0xbc91f3daD1A5F19F8390c400196e58073B6a0BC4',
+            verifyingContractAddressDecryption: '0xb6E160B1ff80D67Bfe90A85eE06Ce0A2613607D1',
+            verifyingContractAddressInputVerification: '0x7048C39f048125eDa9d678AEbaDfB22F7900a29F',
+            gatewayChainId: 55815,
+            relayerUrl: 'https://relayer.testnet.zama.cloud',
+            network: process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL || 'https://sepolia.infura.io/v3/ac7264316be146b0ae56f2222773a352'
+          };
+          
+          console.log('🌐 Using RPC:', manualConfig.network);
+          const instance = await fhevmModule.createInstance(manualConfig);
+          console.log('✅ FHEVM instance created with your RPC');
           console.log('🔍 Instance methods:', Object.getOwnPropertyNames(instance));
           console.log('🔍 Instance prototype methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(instance)));
           setFhevm(instance);
           setIsMockMode(false);
-        } catch (kmsError) {
-          console.warn('⚠️ SepoliaConfig failed, trying manual config:', kmsError);
-          
-          try {
-            // Try manual config with Sepolia addresses (without network to avoid rate limits)
-            const manualConfig = {
-              chainId: 11155111,
-              kmsContractAddress: '0x1364cBBf2cDF5032C47d8226a6f6FBD2AFCDacAC',
-              aclContractAddress: '0x687820221192C5B662b25367F70076A37bc79b6c',
-              inputVerifierContractAddress: '0xbc91f3daD1A5F19F8390c400196e58073B6a0BC4',
-              verifyingContractAddressDecryption: '0xb6E160B1ff80D67Bfe90A85eE06Ce0A2613607D1',
-              verifyingContractAddressInputVerification: '0x7048C39f048125eDa9d678AEbaDfB22F7900a29F',
-              gatewayChainId: 55815,
-              relayerUrl: 'https://relayer.testnet.zama.cloud'
-            };
-            
-            const instance = await fhevmModule.createInstance(manualConfig);
-            console.log('✅ FHEVM instance created with manual config');
-            console.log('🔍 Instance methods:', Object.getOwnPropertyNames(instance));
-            console.log('🔍 Instance prototype methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(instance)));
-            setFhevm(instance);
-            setIsMockMode(false);
-          } catch (manualError) {
-            console.warn('⚠️ Manual config also failed, falling back to mock mode:', manualError);
-            throw new Error('KMS contract address is not valid or empty');
-          }
+        } catch (manualError) {
+          console.warn('⚠️ Manual config failed, falling back to mock mode:', manualError);
+          console.log('🔄 Using mock mode for FHE operations');
+          setFhevm(null);
+          setIsMockMode(true);
         }
       } else {
         throw new Error('createInstance method not found in FHEVM module');

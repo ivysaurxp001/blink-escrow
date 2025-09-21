@@ -14,6 +14,7 @@ export default function Navigation() {
   const navItems = [
     { href: "/", label: "Home" },
     { href: "/marketplace", label: "Marketplace" },
+    { href: "/portfolio", label: "Portfolio" },
     { href: "/p2p/new", label: "Create P2P" },
     { href: "/me", label: "My Account" },
   ];

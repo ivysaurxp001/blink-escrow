@@ -5,7 +5,18 @@ import { Badge } from "@/components/ui/Badge";
 import { DealInfo, DealState, DealMode } from "@/lib/types";
 import { useBlindEscrow } from "../hooks/useBlindEscrow";
 import { useRole } from "../hooks/useRole";
+import { useDealValues } from "../contexts/DealValuesContext";
 import { formatDealState, getStateColor, shortAddress } from "@/lib/format";
+import { MOCK_TOKENS } from "@/abi/MockTokenAddresses";
+
+// Function to get token name from address
+function getTokenName(address: string): string {
+  const tokenMap: { [key: string]: string } = {
+    [MOCK_TOKENS.MOCK_USDC]: "MockUSDC",
+    [MOCK_TOKENS.MOCK_DAI]: "MockDAI",
+  };
+  return tokenMap[address] || shortAddress(address);
+}
 import { DEAL_STATE_LABELS } from "@/config/constants";
 import { useRef, useEffect } from "react";
 
@@ -15,8 +26,9 @@ interface DealCardProps {
 }
 
 export default function DealCard({ deal, onAction }: DealCardProps) {
-  const { address, submitAskWithThreshold, submitBid, revealMatch, settle } = useBlindEscrow();
+  const { address, submitAskWithThreshold, submitBid, revealMatch, bindRevealed, approvePayToken, settle } = useBlindEscrow();
   const { isSeller, isBuyer, isGuest, isPotentialBuyer } = useRole(deal);
+  const { getDealValues } = useDealValues();
 
   // Debug logging with useRef to avoid spam
   const logged = useRef(false);
@@ -95,18 +107,60 @@ export default function DealCard({ deal, onAction }: DealCardProps) {
 
   const handleRevealAndBind = async () => {
     try {
+      // Step 1: Reveal via relayer (view call)
       const result = await revealMatch(deal.id);
       console.log("Reveal result:", result);
+      
+      if (!result.matched) {
+        console.log("❌ No match found, stopping here");
+        return;
+      }
+      
+      // Step 2: Bind revealed prices (transaction)
+      const storedValues = getDealValues(deal.id);
+      const threshold = storedValues.threshold || 100;
+      await bindRevealed(deal.id, result.askClear, result.bidClear, threshold);
+      console.log("✅ Prices bound successfully");
+      
       onAction?.();
     } catch (error) {
-      console.error("Reveal error:", error);
+      console.error("Reveal and bind error:", error);
     }
   };
 
   const handleSettle = async () => {
     try {
+      // Check if deal is already settled
+      if (deal.state === DealState.Settled) {
+        console.log("ℹ️ Deal is already settled");
+        return;
+      }
+      
+      // Step 1: Reveal via relayer (view call)
       const result = await revealMatch(deal.id);
-      await settle(deal.id, result.askClear, result.bidClear);
+      console.log("Reveal result:", result);
+      
+      if (!result.matched) {
+        console.log("❌ No match found, cannot settle");
+        return;
+      }
+      
+      // Step 2: Bind revealed prices (transaction)
+      const storedValues = getDealValues(deal.id);
+      const threshold = storedValues.threshold || 100;
+      await bindRevealed(deal.id, result.askClear, result.bidClear, threshold);
+      console.log("✅ Prices bound successfully");
+      
+      // Step 3: Approve payToken (transaction) - only if user is buyer
+      if (isBuyer && deal.payToken) {
+        await approvePayToken(deal.payToken, BigInt(result.askClear));
+        console.log("✅ PayToken approved successfully");
+      }
+      
+      // Step 4: Settle (transaction) - new signature without parameters
+      await settle(deal.id);
+      console.log("✅ Deal settled successfully");
+      
       onAction?.();
     } catch (error) {
       console.error("Settle error:", error);
@@ -115,12 +169,12 @@ export default function DealCard({ deal, onAction }: DealCardProps) {
 
   return (
     <Card className="hover:shadow-lg transition-shadow">
-      <CardHeader>
+      <CardHeader className="pb-3">
         <div className="flex justify-between items-start">
           <div>
-            <CardTitle>Deal #{deal.id}</CardTitle>
+            <CardTitle className="text-lg">Deal #{deal.id}</CardTitle>
             {isOpenDeal && (
-              <Badge variant="info" className="mt-1">
+              <Badge variant="info" className="mt-1 text-xs">
                 {hasNoBuyer ? "OPEN - No Buyer" : "OPEN - Buyer Locked"}
               </Badge>
             )}
@@ -131,8 +185,8 @@ export default function DealCard({ deal, onAction }: DealCardProps) {
         </div>
       </CardHeader>
       
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-4 text-sm">
+      <CardContent className="space-y-3 pt-0">
+        <div className="grid grid-cols-2 gap-3 text-sm">
           <div>
             <span className="font-medium">Seller:</span>
             <br />
@@ -148,12 +202,14 @@ export default function DealCard({ deal, onAction }: DealCardProps) {
           <div>
             <span className="font-medium">Asset:</span>
             <br />
-            <span className="font-mono text-xs">{shortAddress(deal.assetToken)}</span>
+            <span className="text-xs font-medium">{getTokenName(deal.assetToken)}</span>
+            <br />
+            <span className="text-xs text-gray-500">Amount: {deal.assetAmount}</span>
           </div>
           <div>
             <span className="font-medium">Payment:</span>
             <br />
-            <span className="font-mono text-xs">{shortAddress(deal.payToken)}</span>
+            <span className="text-xs font-medium">{getTokenName(deal.payToken)}</span>
           </div>
         </div>
 
@@ -166,8 +222,63 @@ export default function DealCard({ deal, onAction }: DealCardProps) {
           </div>
         </div>
 
+        {/* Show deal information for settled deals */}
+        {deal.state === DealState.Settled && (
+          <div className="p-2 bg-green-50 border border-green-200 rounded-lg">
+            <div className="text-sm font-medium text-green-800 mb-1">✅ Deal Completed</div>
+            <div className="text-xs text-green-700 space-y-1">
+              <div>• Asset transferred to buyer</div>
+              <div>• Payment transferred to seller</div>
+              <div>• Deal successfully settled</div>
+            </div>
+            <div className="mt-1 pt-1 border-t border-green-200">
+              <div className="text-xs text-green-600">
+                <div className="font-medium">Deal Details:</div>
+                <div>• Asset Amount: {deal.assetAmount}</div>
+                <div>• Asset Token: {getTokenName(deal.assetToken)}</div>
+                <div>• Payment Token: {getTokenName(deal.payToken)}</div>
+                {(() => {
+                  const storedValues = getDealValues(deal.id);
+                  if (storedValues.askClear && storedValues.bidClear) {
+                    return (
+                      <div className="mt-1 pt-1 border-t border-green-300">
+                        <div className="font-medium">Settled Prices:</div>
+                        <div>• Ask Price: {storedValues.askClear}</div>
+                        <div>• Bid Price: {storedValues.bidClear}</div>
+                        <div>• Threshold: {storedValues.threshold || 100}</div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Show deal information for canceled deals */}
+        {deal.state === DealState.Canceled && (
+          <div className="p-2 bg-red-50 border border-red-200 rounded-lg">
+            <div className="text-sm font-medium text-red-800 mb-1">❌ Deal Canceled</div>
+            <div className="text-xs text-red-700 space-y-1">
+              <div>• Deal has been canceled</div>
+              <div>• Asset returned to seller</div>
+              <div>• No transaction completed</div>
+            </div>
+            <div className="mt-1 pt-1 border-t border-red-200">
+              <div className="text-xs text-red-600">
+                <div className="font-medium">Deal Details:</div>
+                <div>• Asset Amount: {deal.assetAmount}</div>
+                <div>• Asset Token: {getTokenName(deal.assetToken)}</div>
+                <div>• Payment Token: {getTokenName(deal.payToken)}</div>
+                <div>• Reason: Deal was canceled by seller or owner</div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {!isGuest && (
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-1 flex-wrap">
             {canSubmitAsk && (
               <Button onClick={handleSubmitAsk} size="sm">
                 Submit Ask + Threshold
@@ -195,7 +306,7 @@ export default function DealCard({ deal, onAction }: DealCardProps) {
         )}
 
         {/* Show status message when no actions available */}
-        {!isGuest && !canSubmitAsk && !canSubmitBid && !canReveal && !canSettle && (
+        {!isGuest && !canSubmitAsk && !canSubmitBid && !canReveal && !canSettle && deal.state !== DealState.Settled && deal.state !== DealState.Canceled && (
           <div className="text-sm text-gray-400 bg-gray-800/50 p-3 rounded-lg">
             {isBuyer && deal.state === DealState.B_Submitted && (
               <p>✅ Your bid has been submitted! Waiting for seller to submit ask + threshold...</p>
@@ -205,6 +316,9 @@ export default function DealCard({ deal, onAction }: DealCardProps) {
             )}
             {deal.state === DealState.Ready && (
               <p>🎯 Deal is ready! Both parties can now reveal and settle.</p>
+            )}
+            {deal.state === DealState.Created && (
+              <p>📝 Deal created. Waiting for participants to submit ask/bid...</p>
             )}
           </div>
         )}
