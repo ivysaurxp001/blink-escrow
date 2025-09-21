@@ -16,7 +16,8 @@ import { DeploymentInfo } from "@/components/DeploymentInfo";
 import { TokenBalance } from "@/components/TokenBalance";
 
 export default function MarketplacePage() {
-  const { openDeals, loading, error, refetch } = useDealsQuery();
+  // Only fetch a limited number of deals for overview
+  const { openDeals, loading, error, refetch } = useDealsQuery({ limit: 6 });
   const { createOpenWithAsk } = useBlindEscrow();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -39,6 +40,8 @@ export default function MarketplacePage() {
     try {
       console.log("🔍 Form data before creating deal:", formData);
       console.log("🔍 Asset amount as BigInt:", BigInt(formData.assetAmount));
+      console.log("🔍 Ask amount:", formData.askAmount);
+      console.log("🔍 Threshold:", formData.threshold);
       
       setCurrentStep("Step 1: Approving asset token...");
       const result = await createOpenWithAsk({

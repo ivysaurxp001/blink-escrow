@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useAccount } from "wagmi";
 import { DealInfo, Address } from "@/lib/types";
 
-export function useRole(deal?: DealInfo) {
+export function useRole(deal?: DealInfo | null) {
   const { address } = useAccount();
 
   const role = useMemo(() => {

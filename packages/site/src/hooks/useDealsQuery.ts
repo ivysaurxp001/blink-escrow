@@ -5,12 +5,13 @@ import { BLIND_ESCROW_ADDR } from "@/config/contracts";
 import { BlindEscrowABI } from "@/abi/BlindEscrowABI";
 import { encodeFunctionData, decodeFunctionResult } from "viem";
 
-export function useDealsQuery() {
+export function useDealsQuery(options: { limit?: number } = {}) {
   const { address } = useAccount();
   const publicClient = usePublicClient();
   const [deals, setDeals] = useState<DealInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { limit = 10 } = options;
 
   // Function to fetch individual deal info
   const fetchDealInfo = useCallback(async (dealId: number): Promise<DealInfo | null> => {
@@ -64,6 +65,8 @@ export function useDealsQuery() {
           hasThreshold,
           state
         ] = decodedResult as [number, string, string, string, bigint, string, boolean, boolean, boolean, number];
+        
+        console.log(`🔍 Deal ${dealId} raw seller from blockchain:`, seller);
         
         const dealInfo: DealInfo = {
           id: dealId,
@@ -144,11 +147,11 @@ export function useDealsQuery() {
         return;
       }
       
-      // Fetch all existing deals (limit to reasonable number)
-      const maxDeals = Math.min(nextDealId, 50); // Limit to 50 deals max
+      // Fetch deals with limit
+      const maxDeals = Math.min(nextDealId, limit); // Use provided limit
       const fetchedDeals: DealInfo[] = [];
       
-      console.log(`🔄 Fetching deals 1 to ${maxDeals}...`);
+      console.log(`🔄 Fetching deals 1 to ${maxDeals} (limit: ${limit})...`);
       
       for (let id = 1; id < maxDeals; id++) {
         try {

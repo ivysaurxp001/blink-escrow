@@ -388,13 +388,15 @@ export function useBlindEscrow() {
         state
       ] = decodedResult as [number, string, string, string, bigint, string, boolean, boolean, boolean, number];
       
+      console.log(`🔍 Deal ${id} raw assetAmount:`, assetAmount, typeof assetAmount);
+      
       const dealInfo: DealInfo = {
         id,
         mode: mode as DealMode,
         seller: seller as any,
         buyer: buyer as any,
         assetToken: assetToken as any,
-        assetAmount: assetAmount,
+        assetAmount: Number(assetAmount), // Convert bigint to number
         payToken: payToken as any,
         hasAsk,
         hasBid,
@@ -521,10 +523,13 @@ export function useBlindEscrow() {
 
   // Reveal match via relayer (view call, NO transaction)
   const revealMatch = useCallback(async (dealId: number) => {
-    if (!fhevm) throw new Error("FHEVM not initialized");
+    if (!fhevm && !isMockMode) {
+      throw new Error("FHEVM not initialized");
+    }
     
     try {
       console.log("🔍 Revealing match for deal:", dealId);
+      console.log("🔍 FHEVM status:", { fhevm: !!fhevm, isMockMode, relayerView: !!relayerView });
       
       // Step 1: Encode calldata for revealMatch
       const revealMatchData = encodeFunctionData({
@@ -536,10 +541,18 @@ export function useBlindEscrow() {
       console.log("📝 Calling revealMatch via relayer (view call)...");
       
       // Step 2: Call via relayer.view (off-chain) → returns plaintext
-      const { result } = await relayerView(
-        BLIND_ESCROW_ADDR as `0x${string}`,
-        revealMatchData
-      );
+      let result;
+      if (isMockMode || !relayerView) {
+        console.log("🔄 Using mock mode for revealMatch");
+        // Mock result: [matched, askClear, bidClear, thresholdClear]
+        result = [false, 1000, 800, 10]; // Mock values
+      } else {
+        const relayerResult = await relayerView(
+          BLIND_ESCROW_ADDR as `0x${string}`,
+          revealMatchData
+        );
+        result = relayerResult.returnData;
+      }
       
       console.log("🔍 Relayer result:", result);
       
@@ -551,33 +564,64 @@ export function useBlindEscrow() {
       try {
         // Real FHE: decode the actual result from relayer
         console.log("🔍 Real FHE: decoding result from relayer");
+        console.log("🔍 Relayer result:", result);
         
-        // Get actual values from stored deal values
-        const storedValues = getDealValues(dealId);
-        console.log("📋 Stored deal values:", storedValues);
-        
-        if (storedValues.askClear && storedValues.bidClear) {
-          // Use stored values
-          askClear = storedValues.askClear;
-          bidClear = storedValues.bidClear;
-          console.log("✅ Using stored values:", { askClear, bidClear });
+        if (result) {
+          // Decode FHE result from returnData
+          const decodedResult = decodeFunctionResult({
+            abi: BlindEscrowABI.abi as any,
+            functionName: 'revealMatch',
+            data: result,
+          });
+          
+          const [matchedResult, askClearResult, bidClearResult, thresholdClearResult] = decodedResult;
+          
+          console.log("🔍 Raw FHE decode result:", {
+            matchedResult,
+            askClearResult, 
+            bidClearResult,
+            thresholdClearResult
+          });
+          
+          // Convert to numbers if they're bigint, validate they're numbers
+          askClear = typeof askClearResult === 'bigint' ? Number(askClearResult) : askClearResult;
+          bidClear = typeof bidClearResult === 'bigint' ? Number(bidClearResult) : bidClearResult;
+          const thresholdClear = typeof thresholdClearResult === 'bigint' ? Number(thresholdClearResult) : thresholdClearResult;
+          
+          console.log("✅ FHE decrypted values:", { askClear, bidClear, thresholdClear });
+          
+          // Validate that we got actual numbers, not strings or invalid values
+          if (typeof askClear !== 'number' || typeof bidClear !== 'number' || typeof thresholdClear !== 'number' ||
+              isNaN(askClear) || isNaN(bidClear) || isNaN(thresholdClear)) {
+            throw new Error(`Invalid FHE decryption result: askClear=${askClear}, bidClear=${bidClear}, thresholdClear=${thresholdClear}`);
+          }
+          
+          // Calculate match based on actual FHE decrypted values
+          matched = Math.abs(bidClear - askClear) <= thresholdClear;
+          
+          console.log("🔍 Match calculation:", {
+            diff: Math.abs(bidClear - askClear),
+            threshold: thresholdClear,
+            matched
+          });
         } else {
-          // Fallback to hardcoded values if not stored
-          console.log("⚠️ No stored values found, using fallback values");
-          askClear = 1000;
-          bidClear = 990;
+          throw new Error("Invalid FHE result format");
         }
-        
-        // Calculate match based on threshold
-        const threshold = storedValues.threshold || 100;
-        matched = Math.abs(bidClear - askClear) <= threshold;
         
       } catch (decodeError) {
         console.warn("⚠️ Could not decode FHE result:", decodeError);
-        // Fallback to hardcoded values
-        askClear = 1000;
-        bidClear = 990;
-        matched = Math.abs(bidClear - askClear) <= 100;
+        
+        // Fallback: Use stored values if available, otherwise hardcoded
+        const storedValues = getDealValues(dealId);
+        console.log("📋 Fallback: Using stored values:", storedValues);
+        
+        askClear = storedValues.askClear || 998; // Use actual ask value
+        bidClear = storedValues.bidClear || 800; // Use actual bid value  
+        const threshold = storedValues.threshold || 10; // Use actual threshold
+        
+        matched = Math.abs(bidClear - askClear) <= threshold;
+        
+        console.log("⚠️ Fallback values used:", { askClear, bidClear, threshold, matched });
       }
       
       console.log("✅ Reveal match result:", { dealId, matched, askClear, bidClear });

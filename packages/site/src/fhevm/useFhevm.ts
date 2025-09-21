@@ -78,6 +78,9 @@ export function useFhevm() {
           console.log('✅ FHEVM instance created with your RPC');
           console.log('🔍 Instance methods:', Object.getOwnPropertyNames(instance));
           console.log('🔍 Instance prototype methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(instance)));
+          console.log('🔍 Available methods:', Object.keys(instance));
+          console.log('🔍 Has view?', 'view' in instance);
+          console.log('🔍 Has send?', 'send' in instance);
           setFhevm(instance);
           setIsMockMode(false);
         } catch (manualError) {
@@ -188,12 +191,12 @@ export function useFhevm() {
     
     try {
       // Real FHEVM implementation - check if method exists
-      if (fhevm.relayerView) {
-        const result = await fhevm.relayerView(to, data);
+      if (fhevm.view) {
+        const result = await fhevm.view({ to, data });
         console.log('✅ Relayer result (real):', result);
         return result;
       } else {
-        throw new Error('FHEVM instance does not have relayerView method');
+        throw new Error('FHEVM instance does not have view method');
       }
     } catch (error) {
       console.warn('⚠️ Real relayer view failed, falling back to mock:', error);

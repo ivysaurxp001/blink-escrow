@@ -19,6 +19,7 @@ function getTokenName(address: string): string {
 }
 import { DEAL_STATE_LABELS } from "@/config/constants";
 import { useRef, useEffect } from "react";
+import Link from "next/link";
 
 interface DealCardProps {
   deal: DealInfo;
@@ -168,11 +169,12 @@ export default function DealCard({ deal, onAction }: DealCardProps) {
   };
 
   return (
-    <Card className="hover:shadow-lg transition-shadow">
-      <CardHeader className="pb-3">
-        <div className="flex justify-between items-start">
-          <div>
-            <CardTitle className="text-lg">Deal #{deal.id}</CardTitle>
+    <Link href={`/deals/${deal.id}`}>
+      <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+        <CardHeader className="pb-3">
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle className="text-lg">Deal #{deal.id}</CardTitle>
             {isOpenDeal && (
               <Badge variant="info" className="mt-1 text-xs">
                 {hasNoBuyer ? "OPEN - No Buyer" : "OPEN - Buyer Locked"}
@@ -355,5 +357,6 @@ export default function DealCard({ deal, onAction }: DealCardProps) {
         )}
       </CardContent>
     </Card>
+    </Link>
   );
 }
