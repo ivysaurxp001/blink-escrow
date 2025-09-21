@@ -3,33 +3,27 @@ pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-contract MockToken is ERC20 {
-    uint8 private _decimals;
+contract SimpleToken is ERC20 {
+    address public owner;
     
     constructor(
         string memory name,
         string memory symbol,
-        uint8 decimals_
+        uint256 initialSupply,
+        address initialHolder
     ) ERC20(name, symbol) {
-        _decimals = decimals_;
+        owner = msg.sender;
+        _mint(initialHolder, initialSupply);
     }
     
-    function decimals() public view virtual override returns (uint8) {
-        return _decimals;
-    }
-    
-    // Mint function - anyone can mint (for testing)
+    // Mint function for owner
     function mint(address to, uint256 amount) external {
+        require(msg.sender == owner, "Only owner can mint");
         _mint(to, amount);
     }
     
     // Burn function
     function burn(uint256 amount) external {
         _burn(msg.sender, amount);
-    }
-    
-    // Faucet function - mint to caller
-    function faucet() external {
-        _mint(msg.sender, 1000 * 10**_decimals);
     }
 }

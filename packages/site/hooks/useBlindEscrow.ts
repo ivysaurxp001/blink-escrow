@@ -1,26 +1,134 @@
 import { useCallback, useMemo } from "react";
-import { Address, DealInfo, DealState } from "@/lib/types";
+import { useAccount, useContract, useSigner } from "wagmi";
+import { Address, DealInfo, DealState, DealMode } from "@/lib/types";
+import { BLIND_ESCROW_ADDR } from "@/config/contracts";
+import BlindEscrowABI from "@/abi/BlindEscrowABI";
 
 export function useBlindEscrow() {
-  // Mock implementation for now
+  const { address } = useAccount();
+  const { data: signer } = useSigner();
+
+  const contract = useContract({
+    address: BLIND_ESCROW_ADDR,
+    abi: BlindEscrowABI,
+    signerOrProvider: signer,
+  });
+
+  // Create P2P deal
+  const createDeal = useCallback(async (params: {
+    buyer: Address;
+    assetToken: Address;
+    assetAmount: bigint;
+    payToken: Address;
+  }) => {
+    if (!contract) throw new Error("No contract");
+    
+    const tx = await contract.createDeal(
+      params.buyer,
+      DealMode.P2P,
+      params.assetToken,
+      params.assetAmount,
+      params.payToken
+    );
+    await tx.wait();
+    const id = await contract.nextDealId();
+    return Number(id);
+  }, [contract]);
+
+  // Create OPEN deal
+  const createOpen = useCallback(async (params: {
+    assetToken: Address;
+    assetAmount: bigint;
+    payToken: Address;
+  }) => {
+    if (!contract) throw new Error("No contract");
+    
+    const Zero = "0x0000000000000000000000000000000000000000" as Address;
+    const tx = await contract.createDeal(
+      Zero,
+      DealMode.OPEN,
+      params.assetToken,
+      params.assetAmount,
+      params.payToken
+    );
+    await tx.wait();
+    const id = await contract.nextDealId();
+    return Number(id);
+  }, [contract]);
+
+  // Get deal info with mode parsing
   const getDeal = useCallback(async (id: number): Promise<DealInfo> => {
-    // Mock deal data
+    if (!contract) throw new Error("No contract");
+    
+    const info = await contract.getDealInfo(id);
     return {
       id,
-      seller: "0x963a2d0BE2eb5d785C6E73ec904fcE8d65691773" as Address,
-      buyer: "0xd8FF12Afb233f53666a22373e864c3e23DcF7495" as Address,
-      assetToken: "0x5f3CD01981EFB5C500d20be535C68B980cfFC414" as Address,
-      assetAmount: BigInt("1000000000"),
-      payToken: "0xFaba8eFb5d502baf7Cd3832e0AF95EF84a496738" as Address,
-      hasAsk: true,
-      hasBid: true,
-      hasThreshold: true,
-      state: DealState.Ready,
+      mode: Number(info[0]) as DealMode,
+      seller: info[1] as Address,
+      buyer: info[2] as Address,
+      assetToken: info[3] as Address,
+      assetAmount: info[4] as bigint,
+      payToken: info[5] as Address,
+      hasAsk: info[6] as boolean,
+      hasBid: info[7] as boolean,
+      hasThreshold: info[8] as boolean,
+      state: Number(info[9]) as DealState,
     };
-  }, []);
+  }, [contract]);
 
+  // Submit bid (with buyer locking for OPEN mode)
+  const submitBid = useCallback(async (dealId: number, bidInt: number) => {
+    if (!contract) throw new Error("No contract");
+    
+    // For now, use mock encryption (will be replaced with real FHEVM)
+    const mockEncBid = bidInt; // This should be encrypted with FHEVM
+    
+    const tx = await contract.submitBid(dealId, mockEncBid);
+    await tx.wait();
+  }, [contract]);
+
+  // Submit ask with threshold
+  const submitAskWithThreshold = useCallback(async (dealId: number, askInt: number, thresholdInt: number) => {
+    if (!contract) throw new Error("No contract");
+    
+    // For now, use mock encryption (will be replaced with real FHEVM)
+    const mockEncAsk = askInt;
+    const mockEncThreshold = thresholdInt;
+    
+    const tx = await contract.submitAskWithThreshold(dealId, mockEncAsk, mockEncThreshold);
+    await tx.wait();
+  }, [contract]);
+
+  // Reveal match (mock implementation)
+  const revealMatch = useCallback(async (dealId: number) => {
+    if (!contract) throw new Error("No contract");
+    
+    // Mock reveal - in real implementation this would use FHEVM relayer
+    const deal = await getDeal(dealId);
+    const askClear = 1000; // Mock values
+    const bidClear = 990;
+    const threshold = 100;
+    
+    const matched = Math.abs(bidClear - askClear) <= threshold;
+    
+    // Bind revealed prices
+    const tx = await contract.bindRevealed(dealId, askClear, bidClear);
+    await tx.wait();
+    
+    return { matched, askClear, bidClear };
+  }, [contract, getDeal]);
+
+  // Settle deal
+  const settle = useCallback(async (dealId: number, askClear: number, bidClear: number) => {
+    if (!contract) throw new Error("No contract");
+    
+    const tx = await contract.settle(dealId, askClear, bidClear);
+    await tx.wait();
+  }, [contract]);
+
+  // Get token balance
   const getTokenBalance = useCallback(async (tokenAddress: string, userAddress?: string) => {
-    // Mock balance data
+    // Mock implementation - in real app this would call ERC20 contract
     return {
       balance: "1000000000000000000009000",
       name: "Mock Token",
@@ -30,10 +138,21 @@ export function useBlindEscrow() {
     };
   }, []);
 
-  return { 
-    getDeal, 
+  return {
+    // Contract info
+    address,
+    contractAddress: BLIND_ESCROW_ADDR,
+    
+    // Deal operations
+    createDeal,
+    createOpen,
+    getDeal,
+    submitBid,
+    submitAskWithThreshold,
+    revealMatch,
+    settle,
+    
+    // Utility
     getTokenBalance,
-    address: "0x963a2d0BE2eb5d785C6E73ec904fcE8d65691773" as Address,
-    contractAddress: "0x7bB9ebEB978d79a7e970ce7a53D4522fDEc12AD8" as Address
   };
 }

@@ -2,11 +2,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { DealInfo, DealState } from "@/lib/types";
-import { useBlindEscrow } from "@/hooks/useBlindEscrow";
-import { useRole } from "@/hooks/useRole";
+import { DealInfo, DealState, DealMode } from "@/lib/types";
+import { useBlindEscrow } from "../hooks/useBlindEscrow";
+import { useRole } from "../hooks/useRole";
 import { formatDealState, getStateColor, shortAddress } from "@/lib/format";
 import { DEAL_STATE_LABELS } from "@/config/constants";
+import { useRef, useEffect } from "react";
 
 interface DealCardProps {
   deal: DealInfo;
@@ -14,8 +15,31 @@ interface DealCardProps {
 }
 
 export default function DealCard({ deal, onAction }: DealCardProps) {
-  const { address, submitAskWithThreshold, submitBid, reveal, bind, settle } = useBlindEscrow();
-  const { isSeller, isBuyer, isGuest } = useRole(deal);
+  const { address, submitAskWithThreshold, submitBid, revealMatch, settle } = useBlindEscrow();
+  const { isSeller, isBuyer, isGuest, isPotentialBuyer } = useRole(deal);
+
+  // Debug logging with useRef to avoid spam
+  const logged = useRef(false);
+  useEffect(() => {
+    if (!logged.current) {
+      console.log(`🔍 Deal ${deal.id} debug:`, {
+        address,
+        isSeller,
+        isBuyer,
+        isGuest,
+        isPotentialBuyer,
+        dealMode: deal.mode,
+        dealBuyer: deal.buyer,
+        dealSeller: deal.seller
+      });
+      logged.current = true;
+    }
+  }, [deal.id, address, isSeller, isBuyer, isGuest, isPotentialBuyer, deal.mode, deal.buyer, deal.seller]);
+
+  const Zero = "0x0000000000000000000000000000000000000000";
+  const isOpenDeal = deal.mode === DealMode.OPEN;
+  const hasNoBuyer = deal.buyer === Zero;
+  const canBecomeBuyer = isPotentialBuyer || (isOpenDeal && hasNoBuyer && address && !isSeller);
 
   const canSubmitAsk = isSeller && (deal.state === DealState.Created || deal.state === DealState.B_Submitted);
   const canSubmitBid = isBuyer && (deal.state === DealState.Created || deal.state === DealState.A_Submitted);
@@ -24,7 +48,17 @@ export default function DealCard({ deal, onAction }: DealCardProps) {
 
   const handleSubmitAsk = async () => {
     try {
-      await submitAskWithThreshold(deal.id, 1000, 100); // Demo values
+      const askAmount = prompt("Enter your ask amount (in DAI):", "1000");
+      if (!askAmount || isNaN(Number(askAmount))) {
+        alert("Please enter a valid ask amount");
+        return;
+      }
+      const threshold = prompt("Enter threshold (in DAI):", "100");
+      if (!threshold || isNaN(Number(threshold))) {
+        alert("Please enter a valid threshold");
+        return;
+      }
+      await submitAskWithThreshold(deal.id, Number(askAmount), Number(threshold));
       onAction?.();
     } catch (error) {
       console.error("Submit ask error:", error);
@@ -33,18 +67,36 @@ export default function DealCard({ deal, onAction }: DealCardProps) {
 
   const handleSubmitBid = async () => {
     try {
-      await submitBid(deal.id, 990); // Demo value
+      const bidAmount = prompt("Enter your bid amount (in DAI):", "990");
+      if (!bidAmount || isNaN(Number(bidAmount))) {
+        alert("Please enter a valid bid amount");
+        return;
+      }
+      await submitBid(deal.id, Number(bidAmount));
       onAction?.();
     } catch (error) {
       console.error("Submit bid error:", error);
     }
   };
 
+  const handleBecomeBuyer = async () => {
+    try {
+      const bidAmount = prompt("Enter your bid amount (in DAI):", "990");
+      if (!bidAmount || isNaN(Number(bidAmount))) {
+        alert("Please enter a valid bid amount");
+        return;
+      }
+      await submitBid(deal.id, Number(bidAmount)); // This will lock buyer
+      onAction?.();
+    } catch (error) {
+      console.error("Become buyer error:", error);
+    }
+  };
+
   const handleRevealAndBind = async () => {
     try {
-      const result = await reveal(deal.id);
+      const result = await revealMatch(deal.id);
       console.log("Reveal result:", result);
-      await bind(deal.id, result.askClear, result.bidClear);
       onAction?.();
     } catch (error) {
       console.error("Reveal error:", error);
@@ -53,8 +105,7 @@ export default function DealCard({ deal, onAction }: DealCardProps) {
 
   const handleSettle = async () => {
     try {
-      const result = await reveal(deal.id);
-      await bind(deal.id, result.askClear, result.bidClear);
+      const result = await revealMatch(deal.id);
       await settle(deal.id, result.askClear, result.bidClear);
       onAction?.();
     } catch (error) {
@@ -66,7 +117,14 @@ export default function DealCard({ deal, onAction }: DealCardProps) {
     <Card className="hover:shadow-lg transition-shadow">
       <CardHeader>
         <div className="flex justify-between items-start">
-          <CardTitle>Deal #{deal.id}</CardTitle>
+          <div>
+            <CardTitle>Deal #{deal.id}</CardTitle>
+            {isOpenDeal && (
+              <Badge variant="info" className="mt-1">
+                {hasNoBuyer ? "OPEN - No Buyer" : "OPEN - Buyer Locked"}
+              </Badge>
+            )}
+          </div>
           <Badge className={getStateColor(deal.state)}>
             {DEAL_STATE_LABELS[deal.state]}
           </Badge>
@@ -83,7 +141,9 @@ export default function DealCard({ deal, onAction }: DealCardProps) {
           <div>
             <span className="font-medium">Buyer:</span>
             <br />
-            <span className="font-mono text-xs">{shortAddress(deal.buyer)}</span>
+            <span className="font-mono text-xs">
+              {hasNoBuyer ? "Not assigned" : shortAddress(deal.buyer)}
+            </span>
           </div>
           <div>
             <span className="font-medium">Asset:</span>
@@ -134,9 +194,49 @@ export default function DealCard({ deal, onAction }: DealCardProps) {
           </div>
         )}
 
-        {isGuest && (
+        {/* Show status message when no actions available */}
+        {!isGuest && !canSubmitAsk && !canSubmitBid && !canReveal && !canSettle && (
+          <div className="text-sm text-gray-400 bg-gray-800/50 p-3 rounded-lg">
+            {isBuyer && deal.state === DealState.B_Submitted && (
+              <p>✅ Your bid has been submitted! Waiting for seller to submit ask + threshold...</p>
+            )}
+            {isSeller && deal.state === DealState.A_Submitted && (
+              <p>✅ Your ask has been submitted! Waiting for buyer to submit bid...</p>
+            )}
+            {deal.state === DealState.Ready && (
+              <p>🎯 Deal is ready! Both parties can now reveal and settle.</p>
+            )}
+          </div>
+        )}
+
+        {canBecomeBuyer && (
+          <div className="flex gap-2 flex-wrap">
+            <Button 
+              onClick={handleBecomeBuyer} 
+              size="sm" 
+              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white"
+            >
+              Become Buyer & Submit Bid
+            </Button>
+          </div>
+        )}
+
+        {isGuest && !canBecomeBuyer && !address && (
           <div className="text-sm text-gray-500 text-center py-2">
             Connect wallet to interact with this deal
+          </div>
+        )}
+        
+        {isGuest && !canBecomeBuyer && address && (
+          <div className="text-sm text-gray-500 text-center py-2">
+            You are not a participant in this deal
+          </div>
+        )}
+
+        {/* Debug info */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="text-xs text-gray-400 mt-2 p-2 bg-gray-800 rounded">
+            Debug: isGuest={isGuest.toString()}, canBecomeBuyer={canBecomeBuyer?.toString() || 'false'}, address={address ? 'connected' : 'not connected'}
           </div>
         )}
       </CardContent>

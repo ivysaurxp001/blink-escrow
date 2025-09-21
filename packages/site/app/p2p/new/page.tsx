@@ -6,19 +6,59 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import WalletButton from "@/components/WalletButton";
 import Link from "next/link";
+import { useBlindEscrow } from "../../../src/hooks/useBlindEscrow";
+import { MOCK_USDC_ADDR, MOCK_DAI_ADDR } from "@/config/contracts";
 
 export default function NewP2PDealPage() {
+  const { createDeal } = useBlindEscrow();
+  const [isCreating, setIsCreating] = useState(false);
+  const [currentStep, setCurrentStep] = useState<string>("");
+  
   const [formData, setFormData] = useState({
     buyerAddress: "",
     assetAmount: "",
-    assetToken: "0x5f3CD01981EFB5C500d20be535C68B980cfFC414", // MockUSDC
-    payToken: "0xFaba8eFb5d502baf7Cd3832e0AF95EF84a496738", // MockDAI
+    assetToken: MOCK_USDC_ADDR, // Use new MockUSDC address
+    payToken: MOCK_DAI_ADDR, // Use new MockDAI address
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement deal creation
-    console.log("Creating deal with:", formData);
+    setIsCreating(true);
+    setCurrentStep("Creating P2P deal...");
+    
+    try {
+      console.log("Creating P2P deal with:", formData);
+      
+      const dealId = await createDeal({
+        buyer: formData.buyerAddress,
+        assetToken: formData.assetToken,
+        assetAmount: BigInt(formData.assetAmount),
+        payToken: formData.payToken,
+      });
+      
+      console.log("✅ P2P deal created successfully with ID:", dealId);
+      setCurrentStep("Deal created successfully!");
+      
+      // Reset form
+      setFormData({
+        buyerAddress: "",
+        assetAmount: "",
+        assetToken: MOCK_USDC_ADDR,
+        payToken: MOCK_DAI_ADDR,
+      });
+      
+      // Auto-hide success message
+      setTimeout(() => {
+        setCurrentStep("");
+      }, 3000);
+      
+    } catch (error) {
+      console.error("❌ Failed to create P2P deal:", error);
+      setCurrentStep("Failed to create deal. Please try again.");
+      alert(`Failed to create deal: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -161,12 +201,38 @@ export default function NewP2PDealPage() {
               </ol>
             </div>
 
+            {currentStep && (
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 mb-4">
+                <div className="flex items-center">
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-400" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <div>
+                    <p className="text-blue-400 font-medium">{currentStep}</p>
+                    <p className="text-blue-300 text-sm">Please sign the transaction in MetaMask</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-4">
               <Button 
                 type="submit" 
-                className="flex-1 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-500 hover:via-purple-500 hover:to-pink-500 text-white shadow-xl hover:shadow-blue-500/25 transform hover:-translate-y-1 transition-all duration-300 py-3"
+                disabled={isCreating}
+                className="flex-1 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-500 hover:via-purple-500 hover:to-pink-500 text-white shadow-xl hover:shadow-blue-500/25 transform hover:-translate-y-1 transition-all duration-300 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Create Deal
+                {isCreating ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-3 h-4 w-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    {currentStep || "Creating..."}
+                  </>
+                ) : (
+                  "Create Deal"
+                )}
               </Button>
               <Link href="/">
                 <Button 

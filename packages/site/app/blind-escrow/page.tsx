@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useMetaMaskEthersSigner } from "@/hooks/metamask/useMetaMaskEthersSigner";
 import { useAutoSwitchNetwork } from "@/hooks/useAutoSwitchNetwork";
 import { useBlindEscrow } from "@/hooks/useBlindEscrow";
-import { BLIND_ESCROW_ADDR, MOCK_USDC_ADDR, MOCK_DAI_ADDR } from "@/src/config/contracts";
+import { BLIND_ESCROW_ADDR, MOCK_USDC_ADDR, MOCK_DAI_ADDR } from "@/config/contracts";
 import { MOCK_TOKENS } from "@/abi/MockTokenAddresses";
 
 const CONTRACT = BLIND_ESCROW_ADDR;

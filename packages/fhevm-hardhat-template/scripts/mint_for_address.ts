@@ -8,12 +8,12 @@ async function main() {
   const MOCK_USDC_ADDRESS = "0xBf94a31cf41be94810B543296036eE698CCF0d1F"; // Update với address mới nhất
   const MOCK_DAI_ADDRESS = "0x8190e817d4e041026F2F32304006aF6dB1873421";   // Update với address mới nhất
   
-  // Địa chỉ account cần mint (từ command line argument)
-  const targetAddress = process.argv[2];
+  // Địa chỉ account cần mint (từ environment variable hoặc hardcode)
+  const targetAddress = process.env.TARGET_ADDRESS || "0xd8FF12Afb233f53666a22373e864c3e23DcF7495";
   
   if (!targetAddress) {
-    console.error("Usage: npx hardhat run scripts/mint_for_address.ts --network sepolia <target_address>");
-    console.error("Example: npx hardhat run scripts/mint_for_address.ts --network sepolia 0x1234...");
+    console.error("Usage: TARGET_ADDRESS=0x1234... npx hardhat run scripts/mint_for_address.ts --network sepolia");
+    console.error("Example: TARGET_ADDRESS=0xd8FF12Afb233f53666a22373e864c3e23DcF7495 npx hardhat run scripts/mint_for_address.ts --network sepolia");
     process.exit(1);
   }
 

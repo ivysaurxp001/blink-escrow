@@ -7,8 +7,9 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
- * BlindEscrow (P2P, euint32)
- * - Không cần relayer ở bước createDeal (không mã hoá threshold ở đây).
+ * BlindEscrow (P2P + OPEN, euint32)
+ * - P2P: Không cần relayer ở bước createDeal (không mã hoá threshold ở đây).
+ * - OPEN: Buyer chưa chỉ định, ai bid đầu tiên sẽ khóa làm buyer.
  * - Seller sẽ nộp encAsk và encThreshold ở bước sau (setEncThreshold hoặc submitAskWithThreshold).
  */
 contract BlindEscrow is Ownable {
@@ -16,8 +17,12 @@ contract BlindEscrow is Ownable {
     using FHE for ebool;
 
     enum DealState { None, Created, A_Submitted, B_Submitted, Ready, Settled, Canceled }
+    enum DealMode { P2P, OPEN }
 
     struct Deal {
+        // Mode
+        DealMode mode;            // NEW: P2P or OPEN
+
         // Actors
         address seller;
         address buyer;
@@ -50,6 +55,7 @@ contract BlindEscrow is Ownable {
     event AskSubmitted(uint256 indexed dealId);
     event BidSubmitted(uint256 indexed dealId);
     event ThresholdSet(uint256 indexed dealId); // NEW
+    event BuyerLocked(uint256 indexed dealId, address indexed buyer); // NEW
     event Ready(uint256 indexed dealId);
     event Revealed(uint256 indexed dealId, bool matched, uint32 askClear, uint32 bidClear);
     event Settled(uint256 indexed dealId, address seller, address buyer, uint256 assetAmount, uint256 paid);
@@ -63,22 +69,29 @@ contract BlindEscrow is Ownable {
      */
     function createDeal(
         address buyer,
+        DealMode mode,
         address assetToken,
         uint256 assetAmount,
         address payToken
     ) external returns (uint256 dealId) {
-        require(buyer != address(0), "buyer=0");
         require(assetToken != address(0), "assetToken=0");
         require(payToken  != address(0), "payToken=0");
         require(assetAmount > 0, "amount=0");
+
+        if (mode == DealMode.P2P) {
+            require(buyer != address(0), "P2P: buyer=0");
+        } else {
+            require(buyer == address(0), "OPEN: buyer must be 0");
+        }
 
         // Pull asset into escrow
         IERC20(assetToken).transferFrom(msg.sender, address(this), assetAmount);
 
         dealId = ++nextDealId;
         Deal storage d = deals[dealId];
+        d.mode        = mode;          // NEW
         d.seller      = msg.sender;
-        d.buyer       = buyer;
+        d.buyer       = buyer;         // P2P: đã có; OPEN: 0
         d.assetToken  = assetToken;
         d.assetAmount = assetAmount;
         d.payToken    = payToken;
@@ -90,6 +103,54 @@ contract BlindEscrow is Ownable {
 
         emit DealCreated(dealId, msg.sender, buyer);
         emit EscrowDeposited(dealId, msg.sender, assetAmount);
+    }
+
+    /**
+     * @dev Tạo deal và submit ask + threshold cùng lúc (đơn giản hóa flow).
+     */
+    function createDealWithAsk(
+        address buyer,
+        DealMode mode,
+        address assetToken,
+        uint256 assetAmount,
+        address payToken,
+        euint32 encAsk,
+        euint32 encThreshold
+    ) external returns (uint256 dealId) {
+        require(assetToken != address(0), "assetToken=0");
+        require(payToken  != address(0), "payToken=0");
+        require(assetAmount > 0, "amount=0");
+
+        if (mode == DealMode.P2P) {
+            require(buyer != address(0), "P2P: buyer=0");
+        } else {
+            require(buyer == address(0), "OPEN: buyer must be 0");
+        }
+
+        // Pull asset into escrow
+        IERC20(assetToken).transferFrom(msg.sender, address(this), assetAmount);
+
+        dealId = ++nextDealId;
+        Deal storage d = deals[dealId];
+        d.mode        = mode;
+        d.seller      = msg.sender;
+        d.buyer       = buyer;
+        d.assetToken  = assetToken;
+        d.assetAmount = assetAmount;
+        d.payToken    = payToken;
+
+        // Set ask and threshold immediately
+        d.encAsk = encAsk;
+        d.hasAsk = true;
+        d.encThreshold = encThreshold;
+        d.hasEncThreshold = true;
+
+        d.state = DealState.A_Submitted;
+
+        emit DealCreated(dealId, msg.sender, buyer);
+        emit EscrowDeposited(dealId, msg.sender, assetAmount);
+        emit AskSubmitted(dealId);
+        emit ThresholdSet(dealId);
     }
 
     /**
@@ -155,10 +216,17 @@ contract BlindEscrow is Ownable {
 
     /**
      * @dev Buyer nộp encBid (giá tổng đề nghị).
+     * - P2P: chỉ buyer đã chỉ định mới được submit
+     * - OPEN: ai submit đầu tiên sẽ khóa làm buyer
      */
     function submitBid(uint256 dealId, euint32 encBid) external {
         Deal storage d = deals[dealId];
         require(d.state == DealState.Created || d.state == DealState.A_Submitted, "bad state");
+
+        if (d.mode == DealMode.OPEN && d.buyer == address(0)) {
+            d.buyer = msg.sender;
+            emit BuyerLocked(dealId, msg.sender);
+        }
         require(msg.sender == d.buyer, "not buyer");
 
         d.encBid = encBid;
@@ -230,9 +298,10 @@ contract BlindEscrow is Ownable {
     }
 
     /**
-     * @dev Lấy deal info
+     * @dev Lấy deal info (tách thành 2 hàm để tránh stack too deep)
      */
     function getDealInfo(uint256 dealId) external view returns (
+        DealMode mode,
         address seller,
         address buyer,
         address assetToken,
@@ -245,6 +314,7 @@ contract BlindEscrow is Ownable {
     ) {
         Deal storage d = deals[dealId];
         return (
+            d.mode,
             d.seller,
             d.buyer,
             d.assetToken,
@@ -255,6 +325,43 @@ contract BlindEscrow is Ownable {
             d.hasEncThreshold,
             d.state
         );
+    }
+
+    /**
+     * @dev Lấy deal basic info (để tránh stack too deep)
+     */
+    function getDealBasicInfo(uint256 dealId) external view returns (
+        DealMode mode,
+        address seller,
+        address buyer,
+        DealState state
+    ) {
+        Deal storage d = deals[dealId];
+        return (d.mode, d.seller, d.buyer, d.state);
+    }
+
+    /**
+     * @dev Lấy deal asset info
+     */
+    function getDealAssetInfo(uint256 dealId) external view returns (
+        address assetToken,
+        uint256 assetAmount,
+        address payToken
+    ) {
+        Deal storage d = deals[dealId];
+        return (d.assetToken, d.assetAmount, d.payToken);
+    }
+
+    /**
+     * @dev Lấy deal status flags
+     */
+    function getDealStatusFlags(uint256 dealId) external view returns (
+        bool hasAsk,
+        bool hasBid,
+        bool hasThreshold
+    ) {
+        Deal storage d = deals[dealId];
+        return (d.hasAsk, d.hasBid, d.hasEncThreshold);
     }
 
     /**

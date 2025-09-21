@@ -1,5 +1,6 @@
 'use client';
 
+import '@/polyfills';
 import { WagmiProvider } from 'wagmi'
 import { wagmiConfig } from '@/config/wagmi'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'

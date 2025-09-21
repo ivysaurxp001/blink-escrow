@@ -12,8 +12,15 @@ export function useRole(deal?: DealInfo) {
       return "SELLER";
     }
     
-    if (address.toLowerCase() === deal.buyer.toLowerCase()) {
+    // For OPEN deals, buyer might be 0x0 (not assigned yet)
+    const Zero = "0x0000000000000000000000000000000000000000";
+    if (deal.buyer !== Zero && address.toLowerCase() === deal.buyer.toLowerCase()) {
       return "BUYER";
+    }
+    
+    // For OPEN deals with no buyer, user can become buyer
+    if (deal.mode === 1 && deal.buyer === Zero) { // DealMode.OPEN = 1
+      return "POTENTIAL_BUYER";
     }
     
     return "GUEST";
@@ -22,12 +29,14 @@ export function useRole(deal?: DealInfo) {
   const isSeller = role === "SELLER";
   const isBuyer = role === "BUYER";
   const isGuest = role === "GUEST";
+  const isPotentialBuyer = role === "POTENTIAL_BUYER";
 
   return {
     role,
     isSeller,
     isBuyer,
     isGuest,
+    isPotentialBuyer,
   };
 }
 
