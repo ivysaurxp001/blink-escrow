@@ -5,13 +5,14 @@ import { BLIND_ESCROW_ADDR } from "@/config/contracts";
 import { BlindEscrowABI } from "@/abi/BlindEscrowABI";
 import { encodeFunctionData, decodeFunctionResult } from "viem";
 
-export function useDealsQuery(options: { limit?: number } = {}) {
+export function useDealsQuery(options: { limit?: number; offset?: number } = {}) {
   const { address } = useAccount();
   const publicClient = usePublicClient();
   const [deals, setDeals] = useState<DealInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { limit = 10 } = options;
+  const [totalDeals, setTotalDeals] = useState(0);
+  const { limit = 10, offset = 0 } = options;
 
   // Function to fetch individual deal info
   const fetchDealInfo = useCallback(async (dealId: number): Promise<DealInfo | null> => {
@@ -147,13 +148,17 @@ export function useDealsQuery(options: { limit?: number } = {}) {
         return;
       }
       
-      // Fetch deals with limit
-      const maxDeals = Math.min(nextDealId, limit); // Use provided limit
+      // Store total deals count
+      setTotalDeals(nextDealId - 1);
+      
+      // Fetch deals with pagination
+      const startId = offset + 1;
+      const endId = Math.min(nextDealId, offset + limit + 1);
       const fetchedDeals: DealInfo[] = [];
       
-      console.log(`🔄 Fetching deals 1 to ${maxDeals} (limit: ${limit})...`);
+      console.log(`🔄 Fetching deals ${startId} to ${endId - 1} (offset: ${offset}, limit: ${limit})...`);
       
-      for (let id = 1; id < maxDeals; id++) {
+      for (let id = startId; id < endId; id++) {
         try {
           const deal = await fetchDealInfo(id);
           if (deal) {
@@ -178,7 +183,7 @@ export function useDealsQuery(options: { limit?: number } = {}) {
     } finally {
       setLoading(false);
     }
-  }, [publicClient, fetchDealInfo]);
+  }, [publicClient, fetchDealInfo, offset, limit]);
 
   // Filter deals by type
   const openDeals = useMemo(() => 
@@ -218,6 +223,7 @@ export function useDealsQuery(options: { limit?: number } = {}) {
     activeDeals,
     loading,
     error,
+    totalDeals,
     refetch: fetchDeals,
   };
 }

@@ -16,8 +16,23 @@ import { DeploymentInfo } from "@/components/DeploymentInfo";
 import { TokenBalance } from "@/components/TokenBalance";
 
 export default function MarketplacePage() {
-  // Only fetch a limited number of deals for overview
-  const { openDeals, loading, error, refetch } = useDealsQuery({ limit: 6 });
+  const [currentPage, setCurrentPage] = useState(1);
+  const dealsPerPage = 6;
+  
+  // Fetch deals with pagination
+  const { openDeals, loading, error, totalDeals, refetch } = useDealsQuery({ 
+    limit: dealsPerPage,
+    offset: (currentPage - 1) * dealsPerPage
+  });
+  
+  // Debug pagination
+  console.log('🔍 Pagination debug:', {
+    currentPage,
+    dealsPerPage,
+    offset: (currentPage - 1) * dealsPerPage,
+    totalDeals,
+    dealsCount: openDeals.length
+  });
   const { createOpenWithAsk } = useBlindEscrow();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -348,15 +363,42 @@ export default function MarketplacePage() {
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {openDeals.map((deal: DealInfo) => (
-              <DealCard 
-                key={deal.id} 
-                deal={deal} 
-                onAction={refetch}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {openDeals.map((deal: DealInfo) => (
+                <DealCard 
+                  key={deal.id} 
+                  deal={deal} 
+                  onAction={refetch}
+                />
+              ))}
+            </div>
+            
+            {/* Pagination */}
+            {totalDeals > dealsPerPage && (
+              <div className="mt-8 flex justify-center items-center space-x-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  Previous
+                </Button>
+                
+                <span className="text-sm text-gray-600">
+                  Page {currentPage} of {Math.ceil(totalDeals / dealsPerPage)}
+                </span>
+                
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentPage(prev => Math.min(Math.ceil(totalDeals / dealsPerPage), prev + 1))}
+                  disabled={currentPage >= Math.ceil(totalDeals / dealsPerPage)}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
