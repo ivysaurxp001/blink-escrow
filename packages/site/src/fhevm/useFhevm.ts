@@ -17,7 +17,7 @@ export function useFhevm() {
       // Check if we're in mock mode (default to false to use real FHE)
       const mockMode = process.env.NEXT_PUBLIC_FHE_MOCK === 'true';
       if (mockMode) {
-        console.log('🔧 FHEVM Mock Mode enabled');
+        console.log('🔧 FHEVM Mock Mode enabled (forced)');
         setIsMockMode(true);
         setFhevm({
           encrypt32: (n: number) => ({
@@ -133,10 +133,6 @@ export function useFhevm() {
   }, []); // Empty dependency array to run only once
 
   const encrypt32 = useCallback(async (n: number) => {
-    if (!fhevm) {
-      throw new Error('FHEVM not initialized');
-    }
-    
     console.log('🔐 Encrypting:', n, isMockMode ? '(mock)' : '(real)');
     
     if (isMockMode) {
@@ -144,6 +140,10 @@ export function useFhevm() {
       const bytes32 = `0x${n.toString(16).padStart(64, '0')}`;
       console.log('✅ Encrypted result (mock):', bytes32);
       return bytes32;
+    }
+    
+    if (!fhevm) {
+      throw new Error('FHEVM not initialized');
     }
     
     try {

@@ -648,8 +648,29 @@ export function useBlindEscrow() {
       
       if (isMockMode || !relayerView) {
         console.log("🔄 Using mock mode for revealMatch");
+        
+        // Get stored values from DealValuesContext
+        const storedValues = getDealValues(dealId);
+        console.log("🔍 Stored values for deal", dealId, ":", storedValues);
+        
+        // Use stored values if available, otherwise use defaults
+        const askClear = storedValues.askClear || 1000;
+        const bidClear = storedValues.bidClear || 800;
+        const thresholdClear = storedValues.thresholdClear || 10;
+        
+        // Calculate match: |bid - ask| <= threshold
+        const matched = Math.abs(bidClear - askClear) <= thresholdClear;
+        
+        console.log("🔍 Mock match calculation:", {
+          askClear,
+          bidClear,
+          thresholdClear,
+          diff: Math.abs(bidClear - askClear),
+          matched
+        });
+        
         // Mock result: [matched, askClear, bidClear, thresholdClear]
-        result = [false, 1000, 800, 10]; // Mock values
+        result = [matched, askClear, bidClear, thresholdClear];
       } else {
         console.log("🔍 Calling real FHE relayer...");
         try {

@@ -39,6 +39,8 @@ export default function NewP2PDealPage() {
         assetToken: formData.assetToken,
         assetAmount: BigInt(formData.assetAmount),
         payToken: formData.payToken,
+        askAmount: Number(formData.askAmount),
+        threshold: Number(formData.threshold),
       });
       
       console.log("✅ P2P deal created successfully with ID:", dealId);
