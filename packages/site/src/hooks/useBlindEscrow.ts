@@ -11,7 +11,7 @@ export function useBlindEscrow() {
   const { address } = useAccount();
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
-  const { fhevm, encrypt32, isMockMode, relayerView } = useFhevm();
+  const { fhevm, encrypt32, isMockMode, relayerView, reinitialize } = useFhevm();
   const { getDealValues, setDealAsk, setDealBid, setDealThreshold } = useDealValues();
 
   // For now, we'll use a mock contract since we need to handle the contract interaction differently
@@ -53,17 +53,115 @@ export function useBlindEscrow() {
       const approveReceipt = await publicClient.waitForTransactionReceipt({ hash: approveHash });
       console.log("✅ Asset token approved successfully! Receipt:", approveReceipt);
       
-      // Step 2: Create P2P deal
-      console.log("📝 Step 2: Creating P2P deal...");
+      // Step 2: Create P2P deal with encrypted ask and threshold
+      console.log("📝 Step 2: Creating P2P deal with encrypted ask and threshold...");
+      
+      // Encrypt ask and threshold with FHE
+      let encAsk, encThreshold;
+      try {
+        console.log("🔐 Encrypting ask and threshold with FHE...");
+        console.log("🔍 FHEVM status:", { fhevm: !!fhevm, isMockMode });
+        
+        // Wait for FHEVM to be ready
+        if (!fhevm) {
+          console.log("⏳ FHEVM not ready yet, waiting...");
+          // Wait a bit for FHEVM to initialize
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          if (!fhevm) {
+            console.log("🔄 FHEVM still not ready, trying to re-initialize...");
+            // Try to re-initialize FHEVM
+            try {
+              await reinitialize();
+              console.log("✅ FHEVM re-initialized");
+              // Wait a bit more for state to update
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            } catch (reinitError) {
+              console.error("❌ Failed to re-initialize FHEVM:", reinitError);
+            }
+            
+            if (!fhevm) {
+              console.log("🚨 FHEVM state not updated, but instance exists. Trying direct access...");
+              // Try to create FHEVM instance directly
+              try {
+                const fhevmModule = await import('@zama-fhe/relayer-sdk/web' as any);
+                const manualConfig = {
+                  chainId: 11155111,
+                  kmsContractAddress: '0x1364cBBf2cDF5032C47d8226a6f6FBD2AFCDacAC',
+                  aclContractAddress: '0x687820221192C5B662b25367F70076A37bc79b6c',
+                  inputVerifierContractAddress: '0xbc91f3daD1A5F19F8390c400196e58073B6a0BC4',
+                  verifyingContractAddressDecryption: '0xb6E160B1ff80D67Bfe90A85eE06Ce0A2613607D1',
+                  verifyingContractAddressInputVerification: '0x7048C39f048125eDa9d678AEbaDfB22F7900a29F',
+                  gatewayChainId: 55815,
+                  relayerUrl: 'https://relayer.testnet.zama.cloud',
+                  network: process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL || 'https://sepolia.infura.io/v3/ac7264316be146b0ae56f2222773a352'
+                };
+                const directFhevm = await fhevmModule.createInstance(manualConfig);
+                console.log("✅ Direct FHEVM instance created");
+                
+                // Use direct instance for encryption (same as encrypt32 function)
+                const encryptedAsk = directFhevm.createEncryptedInput('0x0000000000000000000000000000000000000000', '0x0000000000000000000000000000000000000000');
+                const resultAsk = await encryptedAsk.add32(params.askAmount).encrypt();
+                
+                const encryptedThreshold = directFhevm.createEncryptedInput('0x0000000000000000000000000000000000000000', '0x0000000000000000000000000000000000000000');
+                const resultThreshold = await encryptedThreshold.add32(params.threshold).encrypt();
+                
+                // Convert to expected format for contract
+                if (resultAsk && resultAsk.handles && resultAsk.handles.length > 0) {
+                  const handleAsk = resultAsk.handles[0];
+                  encAsk = `0x${Array.from(handleAsk).map((b: any) => b.toString(16).padStart(2, '0')).join('').padStart(64, '0')}`;
+                } else {
+                  throw new Error('Invalid ask encryption result format');
+                }
+                
+                if (resultThreshold && resultThreshold.handles && resultThreshold.handles.length > 0) {
+                  const handleThreshold = resultThreshold.handles[0];
+                  encThreshold = `0x${Array.from(handleThreshold).map((b: any) => b.toString(16).padStart(2, '0')).join('').padStart(64, '0')}`;
+                } else {
+                  throw new Error('Invalid threshold encryption result format');
+                }
+                
+                console.log("✅ Direct FHE encryption completed:", { askAmount: params.askAmount, threshold: params.threshold });
+              } catch (directError) {
+                console.error("❌ Direct FHEVM creation failed:", directError);
+                throw new Error("FHEVM not initialized. Please wait for FHEVM to load or check console for initialization errors.");
+              }
+            }
+          }
+        }
+        
+        // Use encrypt32 function (same as Open deal)
+        if (!encAsk && !encThreshold) {
+          encAsk = await encrypt32(params.askAmount);
+          console.log("✅ Ask encrypted:", encAsk);
+          
+          encThreshold = await encrypt32(params.threshold);
+          console.log("✅ Threshold encrypted:", encThreshold);
+          
+          console.log("✅ FHE encryption completed:", { askAmount: params.askAmount, threshold: params.threshold });
+        }
+      } catch (error) {
+        console.error("❌ FHE encryption failed:", error);
+        console.error("❌ Error details:", {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+          fhevm: !!fhevm,
+          isMockMode
+        });
+        throw new Error(`FHE encryption failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+      
       const createDealData = encodeFunctionData({
         abi: BlindEscrowABI.abi as any,
-        functionName: "createDeal",
+        functionName: "createDealWithAsk",
         args: [
           params.buyer,
           0, // DealMode.P2P
           params.assetToken,
           params.assetAmount,
-          params.payToken
+          params.payToken,
+          encAsk,
+          encThreshold
         ]
       });
       
@@ -422,7 +520,11 @@ export function useBlindEscrow() {
     try {
       // Store the clear bid value for later use in reveal
       setDealBid(dealId, bidInt);
-      console.log("✅ Stored bid value");
+      console.log("✅ Stored bid value:", bidInt);
+      
+      // Debug: Check stored values immediately
+      const storedValues = getDealValues(dealId);
+      console.log("🔍 Stored values after setDealBid:", storedValues);
       
       // Use real FHE encryption for bid
       console.log("🔐 Encrypting bid with FHE...");
@@ -542,16 +644,25 @@ export function useBlindEscrow() {
       
       // Step 2: Call via relayer.view (off-chain) → returns plaintext
       let result;
+      console.log("🔍 Debug: isMockMode =", isMockMode, "relayerView =", !!relayerView);
+      
       if (isMockMode || !relayerView) {
         console.log("🔄 Using mock mode for revealMatch");
         // Mock result: [matched, askClear, bidClear, thresholdClear]
         result = [false, 1000, 800, 10]; // Mock values
       } else {
-        const relayerResult = await relayerView(
-          BLIND_ESCROW_ADDR as `0x${string}`,
-          revealMatchData
-        );
-        result = relayerResult.returnData;
+        console.log("🔍 Calling real FHE relayer...");
+        try {
+          const relayerResult = await relayerView(
+            BLIND_ESCROW_ADDR as `0x${string}`,
+            revealMatchData
+          );
+          console.log("🔍 Raw relayer result:", relayerResult);
+          result = relayerResult.returnData;
+        } catch (relayerError) {
+          console.error("❌ Relayer call failed:", relayerError);
+          throw relayerError;
+        }
       }
       
       console.log("🔍 Relayer result:", result);
@@ -615,9 +726,12 @@ export function useBlindEscrow() {
         const storedValues = getDealValues(dealId);
         console.log("📋 Fallback: Using stored values:", storedValues);
         
+        // Use actual stored values from form submission
         askClear = storedValues.askClear || 998; // Use actual ask value
         bidClear = storedValues.bidClear || 800; // Use actual bid value  
         const threshold = storedValues.threshold || 10; // Use actual threshold
+        
+        console.log("📋 Using actual values:", { askClear, bidClear, threshold });
         
         matched = Math.abs(bidClear - askClear) <= threshold;
         

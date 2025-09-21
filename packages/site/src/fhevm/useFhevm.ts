@@ -190,13 +190,24 @@ export function useFhevm() {
     }
     
     try {
-      // Real FHEVM implementation - check if method exists
-      if (fhevm.view) {
+      // Real FHEVM implementation - check available methods
+      console.log('🔍 FHEVM instance methods:', Object.keys(fhevm));
+      
+      // Try different method names
+      if (typeof fhevm.view === 'function') {
         const result = await fhevm.view({ to, data });
         console.log('✅ Relayer result (real):', result);
         return result;
+      } else if (typeof fhevm.relayerView === 'function') {
+        const result = await fhevm.relayerView({ to, data });
+        console.log('✅ Relayer result (real):', result);
+        return result;
+      } else if (typeof fhevm.call === 'function') {
+        const result = await fhevm.call({ to, data });
+        console.log('✅ Relayer result (real):', result);
+        return result;
       } else {
-        throw new Error('FHEVM instance does not have view method');
+        throw new Error(`FHEVM instance does not have view/relayerView/call method. Available: ${Object.keys(fhevm)}`);
       }
     } catch (error) {
       console.warn('⚠️ Real relayer view failed, falling back to mock:', error);

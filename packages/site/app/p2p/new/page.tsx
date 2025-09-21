@@ -7,18 +7,23 @@ import { Input } from "@/components/ui/Input";
 import WalletButton from "@/components/WalletButton";
 import Link from "next/link";
 import { useBlindEscrow } from "../../../src/hooks/useBlindEscrow";
-import { MOCK_USDC_ADDR, MOCK_DAI_ADDR } from "@/config/contracts";
+import { useDealValues } from "@/contexts/DealValuesContext";
+import { Z_USDC_ADDR, Z_DAI_ADDR } from "@/config/contracts";
+import { MOCK_TOKENS } from "@/abi/MockTokenAddresses";
 
 export default function NewP2PDealPage() {
   const { createDeal } = useBlindEscrow();
+  const { setDealAsk, setDealThreshold } = useDealValues();
   const [isCreating, setIsCreating] = useState(false);
   const [currentStep, setCurrentStep] = useState<string>("");
   
   const [formData, setFormData] = useState({
     buyerAddress: "",
     assetAmount: "",
-    assetToken: MOCK_USDC_ADDR, // Use new MockUSDC address
-    payToken: MOCK_DAI_ADDR, // Use new MockDAI address
+    assetToken: MOCK_TOKENS.Z_USDC, // Z-USDC
+    payToken: MOCK_TOKENS.Z_DAI, // Z-DAI
+    askAmount: "",
+    threshold: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -37,14 +42,17 @@ export default function NewP2PDealPage() {
       });
       
       console.log("✅ P2P deal created successfully with ID:", dealId);
+      console.log("✅ Ask and threshold encrypted and stored on blockchain");
       setCurrentStep("Deal created successfully!");
       
       // Reset form
       setFormData({
         buyerAddress: "",
         assetAmount: "",
-        assetToken: MOCK_USDC_ADDR,
-        payToken: MOCK_DAI_ADDR,
+        assetToken: MOCK_TOKENS.Z_USDC,
+        payToken: MOCK_TOKENS.Z_DAI,
+        askAmount: "",
+        threshold: "",
       });
       
       // Auto-hide success message
@@ -145,28 +153,56 @@ export default function NewP2PDealPage() {
                 <label className="block text-sm font-semibold text-gray-300 mb-3">
                   Asset Token
                 </label>
-                <Input
-                  type="text"
-                  value={formData.assetToken}
-                  onChange={(e) => handleInputChange("assetToken", e.target.value)}
-                  required
-                  className="bg-white/10 border-white/20 text-white placeholder:text-gray-400 focus:border-blue-500 focus:ring-blue-500"
-                />
-                <p className="text-xs text-gray-400 mt-2">MockUSDC</p>
+                <div className="bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white">
+                  <span className="text-blue-400 font-medium">Z-USDC</span>
+                  <p className="text-xs text-gray-400 mt-1 font-mono">{formData.assetToken}</p>
+                </div>
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-gray-300 mb-3">
                   Payment Token
                 </label>
+                <div className="bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white">
+                  <span className="text-purple-400 font-medium">Z-DAI</span>
+                  <p className="text-xs text-gray-400 mt-1 font-mono">{formData.payToken}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-300 mb-3">
+                  Ask Amount
+                </label>
                 <Input
-                  type="text"
-                  value={formData.payToken}
-                  onChange={(e) => handleInputChange("payToken", e.target.value)}
+                  type="number"
+                  placeholder="1000"
+                  value={formData.askAmount}
+                  onChange={(e) => handleInputChange("askAmount", e.target.value)}
                   required
                   className="bg-white/10 border-white/20 text-white placeholder:text-gray-400 focus:border-blue-500 focus:ring-blue-500"
                 />
-                <p className="text-xs text-gray-400 mt-2">MockDAI</p>
+                <p className="text-xs text-gray-400 mt-2">
+                  Your asking price in payment tokens (Z-DAI)
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-300 mb-3">
+                  Threshold
+                </label>
+                <Input
+                  type="number"
+                  placeholder="50"
+                  value={formData.threshold}
+                  onChange={(e) => handleInputChange("threshold", e.target.value)}
+                  required
+                  className="bg-white/10 border-white/20 text-white placeholder:text-gray-400 focus:border-blue-500 focus:ring-blue-500"
+                />
+                <p className="text-xs text-gray-400 mt-2">
+                  Maximum price difference for deal to match
+                </p>
               </div>
             </div>
 
@@ -264,6 +300,14 @@ export default function NewP2PDealPage() {
               <div className="flex justify-between items-center py-2 border-b border-white/10">
                 <span className="text-gray-300 font-medium">Asset Amount:</span>
                 <span className="text-white font-semibold">{formData.assetAmount || "Not set"}</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b border-white/10">
+                <span className="text-gray-300 font-medium">Ask Amount:</span>
+                <span className="text-white font-semibold">{formData.askAmount || "Not set"}</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b border-white/10">
+                <span className="text-gray-300 font-medium">Threshold:</span>
+                <span className="text-white font-semibold">{formData.threshold || "Not set"}</span>
               </div>
               <div className="flex justify-between items-center py-2">
                 <span className="text-gray-300 font-medium">Buyer:</span>

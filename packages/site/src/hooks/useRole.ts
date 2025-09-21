@@ -23,6 +23,11 @@ export function useRole(deal?: DealInfo | null) {
       return "POTENTIAL_BUYER";
     }
     
+    // For P2P deals, only the assigned buyer can be buyer
+    if (deal.mode === 0) { // DealMode.P2P = 0
+      return "GUEST"; // No one else can become buyer in P2P
+    }
+    
     return "GUEST";
   }, [address, deal]);
 

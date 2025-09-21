@@ -41,6 +41,18 @@ export default function DealDetailPage() {
       try {
         setLoading(true);
         const dealData = await getDeal(dealId);
+        console.log('🔍 Deal debug info:', {
+          dealId,
+          seller: dealData.seller,
+          buyer: dealData.buyer,
+          currentAddress: address,
+          isSeller: address && dealData.seller.toLowerCase() === address.toLowerCase(),
+          isBuyer: address && dealData.buyer.toLowerCase() === address.toLowerCase(),
+          dealMode: dealData.mode,
+          dealState: dealData.state,
+          isP2P: dealData.mode === 0,
+          isOPEN: dealData.mode === 1
+        });
         setDeal(dealData);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load deal');
@@ -52,9 +64,19 @@ export default function DealDetailPage() {
     if (dealId) {
       loadDeal();
     }
-  }, [dealId, getDeal]);
+  }, [dealId, getDeal, address]);
 
   const { isSeller, isBuyer, isGuest, isPotentialBuyer } = useRole(deal);
+  
+  // Debug: Check wallet connection
+  console.log("🔍 Wallet debug:", { 
+    address, 
+    isConnected: !!address,
+    isSeller, 
+    isBuyer, 
+    isGuest, 
+    isPotentialBuyer 
+  });
 
   // Action handlers
   const handleSubmitBid = async (bidAmount: string) => {
@@ -73,11 +95,33 @@ export default function DealDetailPage() {
     }
   };
 
+  const handleSubmitAskWithThreshold = async (askAmount: string, threshold: string) => {
+    if (!deal) return;
+    
+    try {
+      setActionLoading('submitAsk');
+      await submitAskWithThreshold(deal.id, Number(askAmount), Number(threshold));
+      
+      // Reload deal data
+      const updatedDeal = await getDeal(dealId);
+      setDeal(updatedDeal);
+    } catch (error) {
+      console.error('Submit ask with threshold error:', error);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleRevealAndBind = async () => {
     if (!deal) return;
     
     try {
       setActionLoading('reveal');
+      
+      // Debug: Check stored values before reveal
+      const storedValues = getDealValues(deal.id);
+      console.log("🔍 Stored values before reveal:", storedValues);
+      
       const result = await revealMatch(deal.id);
       
       if (!result.matched) {
@@ -85,7 +129,6 @@ export default function DealDetailPage() {
         return;
       }
       
-      const storedValues = getDealValues(deal.id);
       const threshold = storedValues.threshold || 100;
       await bindRevealed(deal.id, result.askClear, result.bidClear, threshold);
       
@@ -240,7 +283,7 @@ export default function DealDetailPage() {
               </div>
 
               {/* Action Buttons */}
-              {deal.state === DealState.A_Submitted && isPotentialBuyer && (
+              {deal.state === DealState.A_Submitted && isPotentialBuyer && deal.mode === 1 && (
                 <div className="pt-4 border-t border-white/10">
                   <p className="text-sm text-gray-300 mb-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-400/20 p-3 rounded-lg backdrop-blur-sm">
                     This deal is waiting for a buyer. You can become the buyer and submit a bid.
@@ -255,6 +298,100 @@ export default function DealDetailPage() {
                   >
                     {actionLoading === 'submitBid' ? 'Submitting...' : 'Become Buyer & Submit Bid'}
                   </Button>
+                </div>
+              )}
+
+              {/* P2P Deal Info */}
+              {deal.mode === 0 && (
+                <div className="pt-4 border-t border-white/10">
+                  <p className="text-sm text-gray-300 mb-4 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-400/20 p-3 rounded-lg backdrop-blur-sm">
+                    This is a P2P deal. Only the assigned buyer ({shortAddress(deal.buyer)}) can participate.
+                  </p>
+                  
+                  {/* Wallet not connected */}
+                  {!address && (
+                    <div className="mt-4">
+                      <p className="text-sm text-yellow-300 mb-4 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-400/20 p-3 rounded-lg backdrop-blur-sm">
+                        ⚠️ Please connect your wallet to interact with this deal.
+                      </p>
+                    </div>
+                  )}
+                  
+                  {/* P2P Buyer Actions - Submit Bid */}
+                  {address && isBuyer && (deal.state === DealState.A_Submitted || deal.state === 1) && (
+                    <div className="mt-4">
+                      <p className="text-sm text-gray-300 mb-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-400/20 p-3 rounded-lg backdrop-blur-sm">
+                        You are the assigned buyer. You can submit your bid to participate in this deal.
+                      </p>
+                      <Button 
+                        onClick={() => {
+                          const bidAmount = prompt("Enter your bid amount:");
+                          if (bidAmount) handleSubmitBid(bidAmount);
+                        }}
+                        disabled={actionLoading === 'submitBid'}
+                        className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white border-0 shadow-lg hover:shadow-green-500/25 transform hover:-translate-y-0.5 transition-all duration-200"
+                      >
+                        {actionLoading === 'submitBid' ? 'Submitting...' : 'Submit Bid'}
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* P2P Buyer Actions - After Bid Submitted */}
+                  {isBuyer && (deal.state === DealState.B_Submitted || deal.state === 3) && (
+                    <div className="mt-4">
+                      <p className="text-sm text-gray-300 mb-4 bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-400/20 p-3 rounded-lg backdrop-blur-sm">
+                        ✅ Your bid has been submitted! You can now reveal and bind the deal.
+                      </p>
+                      <Button 
+                        onClick={handleRevealAndBind}
+                        disabled={actionLoading === 'reveal'}
+                        className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white border-0 shadow-lg hover:shadow-orange-500/25 transform hover:-translate-y-0.5 transition-all duration-200"
+                      >
+                        {actionLoading === 'reveal' ? 'Revealing...' : 'Reveal & Bind'}
+                      </Button>
+                      <p className="text-xs text-gray-400 text-center mt-2">
+                        This will check if your bid matches the seller's ask within the threshold.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* P2P Ready State - Reveal & Bind */}
+                  {isBuyer && (deal.state === DealState.Ready || deal.state === 4) && (
+                    <div className="mt-4">
+                      <p className="text-sm text-gray-300 mb-4 bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-400/20 p-3 rounded-lg backdrop-blur-sm">
+                        🎯 Deal is ready! You can now reveal and bind the deal to check if it matches.
+                      </p>
+                      <Button 
+                        onClick={handleRevealAndBind}
+                        disabled={actionLoading === 'reveal'}
+                        className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white border-0 shadow-lg hover:shadow-orange-500/25 transform hover:-translate-y-0.5 transition-all duration-200"
+                      >
+                        {actionLoading === 'reveal' ? 'Revealing...' : 'Reveal & Bind'}
+                      </Button>
+                    </div>
+                  )}
+                  
+                  {/* P2P Seller Actions */}
+                  {isSeller && deal.state === DealState.Created && (
+                    <div className="mt-4">
+                      <p className="text-sm text-gray-300 mb-4 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-400/20 p-3 rounded-lg backdrop-blur-sm">
+                        You are the seller. Submit your ask price and threshold to start the deal.
+                      </p>
+                      <Button 
+                        onClick={() => {
+                          const askAmount = prompt("Enter your ask amount:");
+                          const threshold = prompt("Enter threshold:");
+                          if (askAmount && threshold) {
+                            handleSubmitAskWithThreshold(askAmount, threshold);
+                          }
+                        }}
+                        disabled={actionLoading === 'submitAsk'}
+                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white border-0 shadow-lg hover:shadow-blue-500/25 transform hover:-translate-y-0.5 transition-all duration-200"
+                      >
+                        {actionLoading === 'submitAsk' ? 'Submitting...' : 'Submit Ask & Threshold'}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
 
