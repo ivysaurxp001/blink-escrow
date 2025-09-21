@@ -151,14 +151,16 @@ export function useDealsQuery(options: { limit?: number; offset?: number } = {})
       // Store total deals count
       setTotalDeals(nextDealId - 1);
       
-      // Fetch deals with pagination
-      const startId = offset + 1;
-      const endId = Math.min(nextDealId, offset + limit + 1);
+      // Fetch deals with pagination (newest first)
+      const totalDealsCount = nextDealId - 1;
+      const startId = Math.max(1, totalDealsCount - offset - limit + 1);
+      const endId = totalDealsCount - offset + 1;
       const fetchedDeals: DealInfo[] = [];
       
-      console.log(`🔄 Fetching deals ${startId} to ${endId - 1} (offset: ${offset}, limit: ${limit})...`);
+      console.log(`🔄 Fetching deals ${startId} to ${endId - 1} (newest first, offset: ${offset}, limit: ${limit})...`);
       
-      for (let id = startId; id < endId; id++) {
+      // Fetch from newest to oldest
+      for (let id = endId - 1; id >= startId; id--) {
         try {
           const deal = await fetchDealInfo(id);
           if (deal) {

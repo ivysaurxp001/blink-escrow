@@ -12,8 +12,8 @@ import { MOCK_TOKENS } from "@/abi/MockTokenAddresses";
 // Function to get token name from address
 function getTokenName(address: string): string {
   const tokenMap: { [key: string]: string } = {
-    [MOCK_TOKENS.MOCK_USDC]: "MockUSDC",
-    [MOCK_TOKENS.MOCK_DAI]: "MockDAI",
+    [MOCK_TOKENS.Z_USDC]: "Z-USDC",
+    [MOCK_TOKENS.Z_DAI]: "Z-DAI",
   };
   return tokenMap[address] || shortAddress(address);
 }
@@ -170,71 +170,73 @@ export default function DealCard({ deal, onAction }: DealCardProps) {
 
   return (
     <Link href={`/deals/${deal.id}`}>
-      <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+      <Card className="bg-gradient-to-br from-white/10 via-white/5 to-white/10 backdrop-blur-xl border border-white/20 hover:border-white/30 hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-300 cursor-pointer h-full flex flex-col transform hover:-translate-y-1">
         <CardHeader className="pb-3">
           <div className="flex justify-between items-start">
             <div>
-              <CardTitle className="text-lg">Deal #{deal.id}</CardTitle>
+              <CardTitle className="text-lg text-white font-bold">Deal #{deal.id}</CardTitle>
             {isOpenDeal && (
-              <Badge variant="info" className="mt-1 text-xs">
+              <Badge variant="info" className="mt-1 text-xs bg-blue-500/20 text-blue-300 border-blue-400/30">
                 {hasNoBuyer ? "OPEN - No Buyer" : "OPEN - Buyer Locked"}
               </Badge>
             )}
           </div>
-          <Badge className={getStateColor(deal.state)}>
+          <Badge className={`${getStateColor(deal.state)} bg-opacity-20 border-opacity-30`}>
             {DEAL_STATE_LABELS[deal.state]}
           </Badge>
         </div>
       </CardHeader>
       
-      <CardContent className="space-y-3 pt-0">
+      <CardContent className="space-y-3 pt-0 flex-1 flex flex-col text-white">
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div>
-            <span className="font-medium">Seller:</span>
+            <span className="font-medium text-blue-300">Seller:</span>
             <br />
-            <span className="font-mono text-xs">{shortAddress(deal.seller)}</span>
+            <span className="font-mono text-xs text-gray-300">{shortAddress(deal.seller)}</span>
           </div>
           <div>
-            <span className="font-medium">Buyer:</span>
+            <span className="font-medium text-blue-300">Buyer:</span>
             <br />
-            <span className="font-mono text-xs">
+            <span className="font-mono text-xs text-gray-300">
               {hasNoBuyer ? "Not assigned" : shortAddress(deal.buyer)}
             </span>
           </div>
           <div>
-            <span className="font-medium">Asset:</span>
+            <span className="font-medium text-green-300">Asset:</span>
             <br />
-            <span className="text-xs font-medium">{getTokenName(deal.assetToken)}</span>
+            <span className="text-xs font-medium text-white">{getTokenName(deal.assetToken)}</span>
             <br />
-            <span className="text-xs text-gray-500">Amount: {deal.assetAmount}</span>
+            <span className="text-xs text-gray-400">Amount: {deal.assetAmount}</span>
           </div>
           <div>
-            <span className="font-medium">Payment:</span>
+            <span className="font-medium text-green-300">Payment:</span>
             <br />
-            <span className="text-xs font-medium">{getTokenName(deal.payToken)}</span>
+            <span className="text-xs font-medium text-white">{getTokenName(deal.payToken)}</span>
           </div>
         </div>
 
         <div className="flex items-center gap-2 text-sm">
-          <span className="font-medium">Status:</span>
+          <span className="font-medium text-purple-300">Status:</span>
           <div className="flex gap-1">
-            {deal.hasAsk && <Badge variant="success" size="sm">Ask</Badge>}
-            {deal.hasBid && <Badge variant="info" size="sm">Bid</Badge>}
-            {deal.hasThreshold && <Badge variant="warning" size="sm">Threshold</Badge>}
+            {deal.hasAsk && <Badge variant="success" size="sm" className="bg-green-500/20 text-green-300 border-green-400/30">Ask</Badge>}
+            {deal.hasBid && <Badge variant="info" size="sm" className="bg-blue-500/20 text-blue-300 border-blue-400/30">Bid</Badge>}
+            {deal.hasThreshold && <Badge variant="warning" size="sm" className="bg-yellow-500/20 text-yellow-300 border-yellow-400/30">Threshold</Badge>}
           </div>
         </div>
 
         {/* Show deal information for settled deals */}
         {deal.state === DealState.Settled && (
-          <div className="p-2 bg-green-50 border border-green-200 rounded-lg">
-            <div className="text-sm font-medium text-green-800 mb-1">✅ Deal Completed</div>
-            <div className="text-xs text-green-700 space-y-1">
+          <div className="p-3 bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-400/30 rounded-lg backdrop-blur-sm">
+            <div className="text-sm font-medium text-green-300 mb-2 flex items-center">
+              <span className="mr-2">✅</span> Deal Completed
+            </div>
+            <div className="text-xs text-green-200 space-y-1">
               <div>• Asset transferred to buyer</div>
               <div>• Payment transferred to seller</div>
               <div>• Deal successfully settled</div>
             </div>
-            <div className="mt-1 pt-1 border-t border-green-200">
-              <div className="text-xs text-green-600">
+            <div className="mt-2 pt-2 border-t border-green-400/20">
+              <div className="text-xs text-green-300">
                 <div className="font-medium">Deal Details:</div>
                 <div>• Asset Amount: {deal.assetAmount}</div>
                 <div>• Asset Token: {getTokenName(deal.assetToken)}</div>
@@ -243,7 +245,7 @@ export default function DealCard({ deal, onAction }: DealCardProps) {
                   const storedValues = getDealValues(deal.id);
                   if (storedValues.askClear && storedValues.bidClear) {
                     return (
-                      <div className="mt-1 pt-1 border-t border-green-300">
+                      <div className="mt-2 pt-2 border-t border-green-400/20">
                         <div className="font-medium">Settled Prices:</div>
                         <div>• Ask Price: {storedValues.askClear}</div>
                         <div>• Bid Price: {storedValues.bidClear}</div>
@@ -260,15 +262,17 @@ export default function DealCard({ deal, onAction }: DealCardProps) {
 
         {/* Show deal information for canceled deals */}
         {deal.state === DealState.Canceled && (
-          <div className="p-2 bg-red-50 border border-red-200 rounded-lg">
-            <div className="text-sm font-medium text-red-800 mb-1">❌ Deal Canceled</div>
-            <div className="text-xs text-red-700 space-y-1">
+          <div className="p-3 bg-gradient-to-r from-red-500/10 to-pink-500/10 border border-red-400/30 rounded-lg backdrop-blur-sm">
+            <div className="text-sm font-medium text-red-300 mb-2 flex items-center">
+              <span className="mr-2">❌</span> Deal Canceled
+            </div>
+            <div className="text-xs text-red-200 space-y-1">
               <div>• Deal has been canceled</div>
               <div>• Asset returned to seller</div>
               <div>• No transaction completed</div>
             </div>
-            <div className="mt-1 pt-1 border-t border-red-200">
-              <div className="text-xs text-red-600">
+            <div className="mt-2 pt-2 border-t border-red-400/20">
+              <div className="text-xs text-red-300">
                 <div className="font-medium">Deal Details:</div>
                 <div>• Asset Amount: {deal.assetAmount}</div>
                 <div>• Asset Token: {getTokenName(deal.assetToken)}</div>
@@ -280,27 +284,27 @@ export default function DealCard({ deal, onAction }: DealCardProps) {
         )}
 
         {!isGuest && (
-          <div className="flex gap-1 flex-wrap">
+          <div className="flex gap-2 flex-wrap">
             {canSubmitAsk && (
-              <Button onClick={handleSubmitAsk} size="sm">
+              <Button onClick={handleSubmitAsk} size="sm" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white border-0">
                 Submit Ask + Threshold
               </Button>
             )}
 
             {canSubmitBid && (
-              <Button onClick={handleSubmitBid} size="sm" variant="outline">
+              <Button onClick={handleSubmitBid} size="sm" className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white border-0">
                 Submit Bid
               </Button>
             )}
 
             {canReveal && (
-              <Button onClick={handleRevealAndBind} size="sm" variant="outline">
+              <Button onClick={handleRevealAndBind} size="sm" className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white border-0">
                 Reveal & Bind
               </Button>
             )}
 
             {canSettle && (
-              <Button onClick={handleSettle} size="sm" variant="default">
+              <Button onClick={handleSettle} size="sm" className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white border-0">
                 Settle
               </Button>
             )}
@@ -309,18 +313,26 @@ export default function DealCard({ deal, onAction }: DealCardProps) {
 
         {/* Show status message when no actions available */}
         {!isGuest && !canSubmitAsk && !canSubmitBid && !canReveal && !canSettle && deal.state !== DealState.Settled && deal.state !== DealState.Canceled && (
-          <div className="text-sm text-gray-400 bg-gray-800/50 p-3 rounded-lg">
+          <div className="text-sm text-gray-300 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-400/20 p-3 rounded-lg backdrop-blur-sm">
             {isBuyer && deal.state === DealState.B_Submitted && (
-              <p>✅ Your bid has been submitted! Waiting for seller to submit ask + threshold...</p>
+              <p className="flex items-center">
+                <span className="mr-2">✅</span> Your bid has been submitted! Waiting for seller to submit ask + threshold...
+              </p>
             )}
             {isSeller && deal.state === DealState.A_Submitted && (
-              <p>✅ Your ask has been submitted! Waiting for buyer to submit bid...</p>
+              <p className="flex items-center">
+                <span className="mr-2">✅</span> Your ask has been submitted! Waiting for buyer to submit bid...
+              </p>
             )}
             {deal.state === DealState.Ready && (
-              <p>🎯 Deal is ready! Both parties can now reveal and settle.</p>
+              <p className="flex items-center">
+                <span className="mr-2">🎯</span> Deal is ready! Both parties can now reveal and settle.
+              </p>
             )}
             {deal.state === DealState.Created && (
-              <p>📝 Deal created. Waiting for participants to submit ask/bid...</p>
+              <p className="flex items-center">
+                <span className="mr-2">📝</span> Deal created. Waiting for participants to submit ask/bid...
+              </p>
             )}
           </div>
         )}
@@ -330,7 +342,7 @@ export default function DealCard({ deal, onAction }: DealCardProps) {
             <Button 
               onClick={handleBecomeBuyer} 
               size="sm" 
-              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white"
+              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white border-0 shadow-lg hover:shadow-green-500/25 transform hover:-translate-y-0.5 transition-all duration-200"
             >
               Become Buyer & Submit Bid
             </Button>
@@ -349,12 +361,6 @@ export default function DealCard({ deal, onAction }: DealCardProps) {
           </div>
         )}
 
-        {/* Debug info */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="text-xs text-gray-400 mt-2 p-2 bg-gray-800 rounded">
-            Debug: isGuest={isGuest.toString()}, canBecomeBuyer={canBecomeBuyer?.toString() || 'false'}, address={address ? 'connected' : 'not connected'}
-          </div>
-        )}
       </CardContent>
     </Card>
     </Link>

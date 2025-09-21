@@ -61,13 +61,13 @@ function TokenBalanceItem({ tokenAddress, tokenName, decimals }: TokenBalancePro
 
   if (!address) {
     return (
-      <div className="border rounded-lg p-3 bg-gray-50">
+      <div className="bg-gradient-to-r from-gray-500/10 to-gray-600/10 border border-gray-400/20 rounded-lg p-4 backdrop-blur-sm">
         <div className="flex items-center justify-between">
           <div>
-            <h4 className="font-medium text-gray-600">{tokenName}</h4>
-            <p className="text-sm text-gray-500">Connect wallet to view balance</p>
+            <h4 className="font-medium text-gray-300">{tokenName}</h4>
+            <p className="text-sm text-gray-400">Connect wallet to view balance</p>
           </div>
-          <Badge variant="info">Connect</Badge>
+          <Badge className="bg-gray-500/20 text-gray-300 border-gray-400/30">Connect</Badge>
         </div>
       </div>
     );
@@ -75,13 +75,13 @@ function TokenBalanceItem({ tokenAddress, tokenName, decimals }: TokenBalancePro
 
   if (balanceLoading || symbolLoading) {
     return (
-      <div className="border rounded-lg p-3 bg-gray-50">
+      <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-400/20 rounded-lg p-4 backdrop-blur-sm">
         <div className="flex items-center justify-between">
           <div>
-            <h4 className="font-medium text-gray-600">{tokenName}</h4>
-            <p className="text-sm text-gray-500">Loading...</p>
+            <h4 className="font-medium text-white">{tokenName}</h4>
+            <p className="text-sm text-gray-300">Loading...</p>
           </div>
-          <div className="w-16 h-6 bg-gray-200 rounded animate-pulse"></div>
+          <div className="w-16 h-6 bg-white/20 rounded animate-pulse"></div>
         </div>
       </div>
     );
@@ -91,17 +91,17 @@ function TokenBalanceItem({ tokenAddress, tokenName, decimals }: TokenBalancePro
   const displaySymbol = symbol || tokenName;
 
   return (
-    <div className="border rounded-lg p-3 bg-white hover:bg-gray-50 transition-colors">
+    <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-400/20 rounded-lg p-4 backdrop-blur-sm hover:border-blue-400/40 transition-all duration-200">
       <div className="flex items-center justify-between">
         <div>
-          <h4 className="font-medium text-gray-900">{tokenName}</h4>
-          <p className="text-sm text-gray-600">{displaySymbol}</p>
+          <h4 className="font-medium text-white">{tokenName}</h4>
+          <p className="text-sm text-gray-300">{displaySymbol}</p>
         </div>
         <div className="text-right">
-          <p className="font-semibold text-gray-900">
+          <p className="font-semibold text-white text-lg">
             {parseFloat(formattedBalance).toLocaleString()}
           </p>
-          <p className="text-xs text-gray-500">{displaySymbol}</p>
+          <p className="text-xs text-gray-400">{displaySymbol}</p>
         </div>
       </div>
     </div>
@@ -113,20 +113,20 @@ export function TokenBalance() {
 
   if (!isConnected) {
     return (
-      <Card>
+      <Card className="bg-gradient-to-br from-white/10 via-white/5 to-white/10 backdrop-blur-xl border border-white/20 shadow-2xl">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <span>Token Portfolio</span>
-            <Badge variant="info">Connect Wallet</Badge>
+          <CardTitle className="text-white flex items-center">
+            💼 Token Portfolio
+            <span className="ml-2 text-red-400 text-sm">Not Connected</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-400/30 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
               <span className="text-2xl">💼</span>
             </div>
-            <h3 className="text-lg font-semibold text-gray-700 mb-2">Connect Your Wallet</h3>
-            <p className="text-gray-500">Connect your wallet to view your token balances</p>
+            <h3 className="text-lg font-semibold text-white mb-2">Connect Your Wallet</h3>
+            <p className="text-gray-300">Connect your wallet to view your token balances</p>
           </div>
         </CardContent>
       </Card>
@@ -134,32 +134,32 @@ export function TokenBalance() {
   }
 
   return (
-    <Card>
+    <Card className="bg-gradient-to-br from-white/10 via-white/5 to-white/10 backdrop-blur-xl border border-white/20 shadow-2xl">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <span>Token Portfolio</span>
-          <Badge variant="success">Connected</Badge>
+        <CardTitle className="text-white flex items-center">
+          💼 Token Portfolio
+          <span className="ml-2 text-green-400 text-sm">Connected</span>
         </CardTitle>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-gray-300">
           Wallet: {address?.slice(0, 6)}...{address?.slice(-4)}
         </p>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-4">
         <TokenBalanceItem
-          tokenAddress={MOCK_TOKENS.MOCK_USDC}
-          tokenName="Mock USDC"
+          tokenAddress={MOCK_TOKENS.Z_USDC}
+          tokenName="Z-USDC"
           decimals={6}
         />
         <TokenBalanceItem
-          tokenAddress={MOCK_TOKENS.MOCK_DAI}
-          tokenName="Mock DAI"
+          tokenAddress={MOCK_TOKENS.Z_DAI}
+          tokenName="Z-DAI"
           decimals={18}
         />
         
-        <div className="mt-4 pt-3 border-t border-gray-200">
+        <div className="mt-4 pt-4 border-t border-white/10">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-600">Total Tokens</span>
-            <span className="font-medium text-gray-900">2 Assets</span>
+            <span className="text-gray-300">Total Tokens</span>
+            <span className="font-medium text-white">2 Assets</span>
           </div>
         </div>
       </CardContent>

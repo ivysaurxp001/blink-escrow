@@ -8,11 +8,11 @@
         "address": "0xbAaF7CDeC56830b7415525faBd8602E2199DEfaF",
         "explorer": "https://sepolia.etherscan.io/address/0xbAaF7CDeC56830b7415525faBd8602E2199DEfaF"
       },
-      "MockUSDC": {
+      "Z_USDC": {
         "address": "0x72D4e300767b2Bb95250907b1B177A0Fbff3C273",
         "explorer": "https://sepolia.etherscan.io/address/0x72D4e300767b2Bb95250907b1B177A0Fbff3C273"
       },
-      "MockDAI": {
+      "Z_DAI": {
         "address": "0xEFf11B6A1104F198b791EAE158Fdf3c62185bf2E",
         "explorer": "https://sepolia.etherscan.io/address/0xEFf11B6A1104F198b791EAE158Fdf3c62185bf2E"
       }

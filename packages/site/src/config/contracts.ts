@@ -2,10 +2,10 @@
 export const CONTRACTS: Record<string, Record<string,string>> = {
   "11155111": {
     "BlindEscrow": "0xbAaF7CDeC56830b7415525faBd8602E2199DEfaF",
-    "MockUSDC": "0x72D4e300767b2Bb95250907b1B177A0Fbff3C273",
-    "MockDAI": "0xEFf11B6A1104F198b791EAE158Fdf3c62185bf2E"
+    "Z_USDC": "0x72D4e300767b2Bb95250907b1B177A0Fbff3C273",
+    "Z_DAI": "0xEFf11B6A1104F198b791EAE158Fdf3c62185bf2E"
   }
 } as const;
 export const BLIND_ESCROW_ADDR = CONTRACTS["11155111"]?.BlindEscrow ?? "";
-export const MOCK_USDC_ADDR    = CONTRACTS["11155111"]?.MockUSDC ?? "";
-export const MOCK_DAI_ADDR     = CONTRACTS["11155111"]?.MockDAI ?? "";
+export const Z_USDC_ADDR    = CONTRACTS["11155111"]?.Z_USDC ?? "";
+export const Z_DAI_ADDR     = CONTRACTS["11155111"]?.Z_DAI ?? "";

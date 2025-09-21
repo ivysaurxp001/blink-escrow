@@ -8,8 +8,8 @@ console.log('🚀 Starting full deployment process on Sepolia...\n');
 
 // Global variables to store addresses
 let blindEscrowAddress;
-let mockUSDCAddress;
-let mockDAIAddress;
+let zUSDCAddress;
+let zDAIAddress;
 
 // Step 1: Deploy BlindEscrow contract
 console.log('📦 Step 1: Deploying BlindEscrow contract on Sepolia...');
@@ -53,11 +53,11 @@ try {
     throw new Error('Could not extract token addresses from deployment output');
   }
   
-  mockUSDCAddress = usdcMatch[1];
-  mockDAIAddress = daiMatch[1];
+  zUSDCAddress = usdcMatch[1];
+  zDAIAddress = daiMatch[1];
   
-  console.log(`✅ MockUSDC deployed at: ${mockUSDCAddress}`);
-  console.log(`✅ MockDAI deployed at: ${mockDAIAddress}\n`);
+  console.log(`✅ Z-USDC deployed at: ${zUSDCAddress}`);
+  console.log(`✅ Z-DAI deployed at: ${zDAIAddress}\n`);
   
 } catch (error) {
   console.error('❌ Failed to deploy Mock Tokens:', error.message);
@@ -112,11 +112,11 @@ try {
   if (!blindEscrowAddress) {
     throw new Error('blindEscrowAddress is not defined');
   }
-  if (!mockUSDCAddress) {
-    throw new Error('mockUSDCAddress is not defined');
+  if (!zUSDCAddress) {
+    throw new Error('zUSDCAddress is not defined');
   }
-  if (!mockDAIAddress) {
-    throw new Error('mockDAIAddress is not defined');
+  if (!zDAIAddress) {
+    throw new Error('zDAIAddress is not defined');
   }
   
   // Read current config
@@ -212,13 +212,13 @@ try {
           address: blindEscrowAddress,
           explorer: `https://sepolia.etherscan.io/address/${blindEscrowAddress}`
         },
-        MockUSDC: {
-          address: mockUSDCAddress,
-          explorer: `https://sepolia.etherscan.io/address/${mockUSDCAddress}`
+        Z_USDC: {
+          address: zUSDCAddress,
+          explorer: `https://sepolia.etherscan.io/address/${zUSDCAddress}`
         },
-        MockDAI: {
-          address: mockDAIAddress,
-          explorer: `https://sepolia.etherscan.io/address/${mockDAIAddress}`
+        Z_DAI: {
+          address: zDAIAddress,
+          explorer: `https://sepolia.etherscan.io/address/${zDAIAddress}`
         }
       }
     }
@@ -262,8 +262,8 @@ NEXT_PUBLIC_FHEVM_CHAIN_ID=11155111
 console.log('\n🎉 Full deployment completed successfully on Sepolia!');
 console.log('\n📋 Summary:');
 console.log(`   • BlindEscrow: ${blindEscrowAddress}`);
-console.log(`   • MockUSDC: ${mockUSDCAddress}`);
-console.log(`   • MockDAI: ${mockDAIAddress}`);
+console.log(`   • Z-USDC: ${zUSDCAddress}`);
+console.log(`   • Z-DAI: ${zDAIAddress}`);
 console.log('\n🚀 Next steps:');
 console.log('   1. Start FHEVM relayer: npm run relayer');
 console.log('   2. Start frontend: cd ../site && npm run dev');
@@ -274,5 +274,5 @@ console.log('   • Approve tokens before creating deals');
 console.log('   • Get Sepolia ETH from faucet if needed');
 console.log('\n🔗 Sepolia Explorer:');
 console.log(`   • BlindEscrow: https://sepolia.etherscan.io/address/${blindEscrowAddress}`);
-console.log(`   • MockUSDC: https://sepolia.etherscan.io/address/${mockUSDCAddress}`);
-console.log(`   • MockDAI: https://sepolia.etherscan.io/address/${mockDAIAddress}`);
+console.log(`   • Z-USDC: https://sepolia.etherscan.io/address/${zUSDCAddress}`);
+console.log(`   • Z-DAI: https://sepolia.etherscan.io/address/${zDAIAddress}`);

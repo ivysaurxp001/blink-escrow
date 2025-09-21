@@ -17,8 +17,8 @@ import { DEAL_STATE_LABELS } from '@/config/constants';
 // Function to get token name from address
 function getTokenName(address: string): string {
   const tokenMap: { [key: string]: string } = {
-    [MOCK_TOKENS.MOCK_USDC]: "MockUSDC",
-    [MOCK_TOKENS.MOCK_DAI]: "MockDAI",
+    [MOCK_TOKENS.Z_USDC]: "Z-USDC",
+    [MOCK_TOKENS.Z_DAI]: "Z-DAI",
   };
   return tokenMap[address] || shortAddress(address);
 }
@@ -141,11 +141,13 @@ export default function DealDetailPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded mb-4"></div>
-            <div className="h-64 bg-gray-200 rounded"></div>
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-4xl mx-auto">
+            <div className="animate-pulse">
+              <div className="h-8 bg-white/20 rounded mb-4"></div>
+              <div className="h-64 bg-white/20 rounded"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -154,14 +156,16 @@ export default function DealDetailPage() {
 
   if (error || !deal) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto">
-          <Card>
-            <CardContent className="p-6">
-              <h1 className="text-2xl font-bold text-red-600 mb-4">Error</h1>
-              <p className="text-gray-600">{error || 'Deal not found'}</p>
-            </CardContent>
-          </Card>
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-4xl mx-auto">
+            <Card className="bg-gradient-to-br from-white/10 via-white/5 to-white/10 backdrop-blur-xl border border-white/20 shadow-2xl">
+              <CardContent className="p-6">
+                <h1 className="text-2xl font-bold text-red-300 mb-4">Error</h1>
+                <p className="text-gray-300">{error || 'Deal not found'}</p>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     );
@@ -171,137 +175,146 @@ export default function DealDetailPage() {
   const isOpenDeal = deal.mode === 1; // DealMode.OPEN
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-2xl mx-auto">
-        {/* Back button */}
-        <Button 
-          variant="outline" 
-          onClick={() => window.history.back()}
-          className="mb-6"
-        >
-          ← Back to Marketplace
-        </Button>
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto">
+          {/* Back button */}
+          <Button 
+            variant="outline" 
+            onClick={() => window.history.back()}
+            className="mb-6 bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 hover:border-white/30"
+          >
+            ← Back to Marketplace
+          </Button>
 
-        {/* Deal Card */}
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">Deal #{deal.id}</CardTitle>
-              <Badge 
-                className={`px-3 py-1 text-xs font-medium ${getStateColor(deal.state)}`}
-              >
-                {formatDealState(deal.state)}
-              </Badge>
-            </div>
-          </CardHeader>
+          {/* Deal Card */}
+          <Card className="bg-gradient-to-br from-white/10 via-white/5 to-white/10 backdrop-blur-xl border border-white/20 shadow-2xl">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-2xl text-white font-bold">Deal #{deal.id}</CardTitle>
+                <Badge 
+                  className={`px-3 py-1 text-xs font-medium ${getStateColor(deal.state)} bg-opacity-20 border-opacity-30`}
+                >
+                  {formatDealState(deal.state)}
+                </Badge>
+              </div>
+            </CardHeader>
           
-          <CardContent className="space-y-3">
-            {/* Deal Info */}
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <span className="font-medium">Seller:</span>
-                <br />
-                <span className="font-mono text-xs">{shortAddress(deal.seller)}</span>
-              </div>
-              <div>
-                <span className="font-medium">Buyer:</span>
-                <br />
-                <span className="font-mono text-xs">
-                  {deal.buyer === Zero ? "Not assigned" : shortAddress(deal.buyer)}
-                </span>
-              </div>
-              <div>
-                <span className="font-medium">Asset:</span>
-                <br />
-                <span className="text-xs font-medium">{getTokenName(deal.assetToken)}</span>
-                <br />
-                <span className="text-xs text-gray-500">Amount: {deal.assetAmount}</span>
-              </div>
-              <div>
-                <span className="font-medium">Payment:</span>
-                <br />
-                <span className="text-xs font-medium">{getTokenName(deal.payToken)}</span>
-              </div>
-            </div>
-
-            {/* Status Indicators */}
-            <div className="flex gap-1">
-              {deal.hasAsk && <Badge variant="default" className="text-xs">Ask</Badge>}
-              {deal.hasBid && <Badge variant="default" className="text-xs">Bid</Badge>}
-              {deal.hasThreshold && <Badge variant="default" className="text-xs">Threshold</Badge>}
-            </div>
-
-            {/* Action Buttons */}
-            {deal.state === DealState.A_Submitted && isPotentialBuyer && (
-              <div className="pt-3 border-t">
-                <p className="text-sm text-gray-600 mb-3">
-                  This deal is waiting for a buyer. You can become the buyer and submit a bid.
-                </p>
-                <Button 
-                  onClick={() => {
-                    const bidAmount = prompt("Enter your bid amount:");
-                    if (bidAmount) handleSubmitBid(bidAmount);
-                  }}
-                  disabled={actionLoading === 'submitBid'}
-                  className="w-full"
-                >
-                  {actionLoading === 'submitBid' ? 'Submitting...' : 'Become Buyer & Submit Bid'}
-                </Button>
-              </div>
-            )}
-
-            {deal.state === DealState.Ready && (isSeller || isBuyer) && (
-              <div className="pt-3 border-t">
-                <Button 
-                  onClick={handleRevealAndBind}
-                  disabled={actionLoading === 'reveal'}
-                  className="w-full"
-                >
-                  {actionLoading === 'reveal' ? 'Revealing...' : 'Reveal & Bind'}
-                </Button>
-                <p className="text-xs text-gray-500 mt-2 text-center">
-                  After reveal, if matched = true, you can settle. If matched = false, deal will be unsuccessful.
-                </p>
-              </div>
-            )}
-
-            {deal.state === DealState.Settled && (
-              <div className="pt-3 border-t border-green-200">
-                <div className="text-xs text-green-600">
-                  <div className="font-medium">Deal Completed</div>
-                  <div>• Asset transferred to buyer</div>
-                  <div>• Payment transferred to seller</div>
-                  <div>• Deal successfully settled</div>
+            <CardContent className="space-y-4 text-white">
+              {/* Deal Info */}
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-medium text-blue-300">Seller:</span>
+                  <br />
+                  <span className="font-mono text-xs text-gray-300">{shortAddress(deal.seller)}</span>
                 </div>
-                <div className="mt-1 pt-1 border-t border-green-200">
-                  <div className="text-xs text-green-600">
-                    <div className="font-medium">Deal Details:</div>
-                    <div>• Asset Amount: {deal.assetAmount}</div>
-                    <div>• Asset Token: {getTokenName(deal.assetToken)}</div>
-                    <div>• Payment Token: {getTokenName(deal.payToken)}</div>
+                <div>
+                  <span className="font-medium text-blue-300">Buyer:</span>
+                  <br />
+                  <span className="font-mono text-xs text-gray-300">
+                    {deal.buyer === Zero ? "Not assigned" : shortAddress(deal.buyer)}
+                  </span>
+                </div>
+                <div>
+                  <span className="font-medium text-green-300">Asset:</span>
+                  <br />
+                  <span className="text-xs font-medium text-white">{getTokenName(deal.assetToken)}</span>
+                  <br />
+                  <span className="text-xs text-gray-400">Amount: {deal.assetAmount}</span>
+                </div>
+                <div>
+                  <span className="font-medium text-green-300">Payment:</span>
+                  <br />
+                  <span className="text-xs font-medium text-white">{getTokenName(deal.payToken)}</span>
+                </div>
+              </div>
+
+              {/* Status Indicators */}
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-purple-300">Status:</span>
+                <div className="flex gap-1">
+                  {deal.hasAsk && <Badge variant="success" size="sm" className="bg-green-500/20 text-green-300 border-green-400/30">Ask</Badge>}
+                  {deal.hasBid && <Badge variant="info" size="sm" className="bg-blue-500/20 text-blue-300 border-blue-400/30">Bid</Badge>}
+                  {deal.hasThreshold && <Badge variant="warning" size="sm" className="bg-yellow-500/20 text-yellow-300 border-yellow-400/30">Threshold</Badge>}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              {deal.state === DealState.A_Submitted && isPotentialBuyer && (
+                <div className="pt-4 border-t border-white/10">
+                  <p className="text-sm text-gray-300 mb-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-400/20 p-3 rounded-lg backdrop-blur-sm">
+                    This deal is waiting for a buyer. You can become the buyer and submit a bid.
+                  </p>
+                  <Button 
+                    onClick={() => {
+                      const bidAmount = prompt("Enter your bid amount:");
+                      if (bidAmount) handleSubmitBid(bidAmount);
+                    }}
+                    disabled={actionLoading === 'submitBid'}
+                    className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white border-0 shadow-lg hover:shadow-green-500/25 transform hover:-translate-y-0.5 transition-all duration-200"
+                  >
+                    {actionLoading === 'submitBid' ? 'Submitting...' : 'Become Buyer & Submit Bid'}
+                  </Button>
+                </div>
+              )}
+
+              {deal.state === DealState.Ready && (isSeller || isBuyer) && (
+                <div className="pt-4 border-t border-white/10">
+                  <Button 
+                    onClick={handleRevealAndBind}
+                    disabled={actionLoading === 'reveal'}
+                    className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white border-0 shadow-lg hover:shadow-orange-500/25 transform hover:-translate-y-0.5 transition-all duration-200"
+                  >
+                    {actionLoading === 'reveal' ? 'Revealing...' : 'Reveal & Bind'}
+                  </Button>
+                  <p className="text-xs text-gray-400 mt-3 text-center bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-400/20 p-2 rounded-lg backdrop-blur-sm">
+                    After reveal, if matched = true, you can settle. If matched = false, deal will be unsuccessful.
+                  </p>
+                </div>
+              )}
+
+              {deal.state === DealState.Settled && (
+                <div className="pt-4 border-t border-white/10">
+                  <div className="p-4 bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-400/30 rounded-lg backdrop-blur-sm">
+                    <div className="text-sm font-medium text-green-300 mb-2 flex items-center">
+                      <span className="mr-2">✅</span> Deal Completed
+                    </div>
+                    <div className="text-xs text-green-200 space-y-1">
+                      <div>• Asset transferred to buyer</div>
+                      <div>• Payment transferred to seller</div>
+                      <div>• Deal successfully settled</div>
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-green-400/20">
+                      <div className="text-xs text-green-300">
+                        <div className="font-medium">Deal Details:</div>
+                        <div>• Asset Amount: {deal.assetAmount}</div>
+                        <div>• Asset Token: {getTokenName(deal.assetToken)}</div>
+                        <div>• Payment Token: {getTokenName(deal.payToken)}</div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {deal.state === DealState.Canceled && (
-              <div className="pt-3 border-t border-red-200">
-                <div className="text-xs text-red-600">
-                  <div className="font-medium">Deal Unsuccessful</div>
-                  <div>• Asset Amount: {deal.assetAmount}</div>
-                  <div>• Asset Token: {getTokenName(deal.assetToken)}</div>
-                  <div>• Payment Token: {getTokenName(deal.payToken)}</div>
-                  <div>• Reason: Ask and bid did not match within threshold</div>
+              {deal.state === DealState.Canceled && (
+                <div className="pt-4 border-t border-white/10">
+                  <div className="p-4 bg-gradient-to-r from-red-500/10 to-pink-500/10 border border-red-400/30 rounded-lg backdrop-blur-sm">
+                    <div className="text-sm font-medium text-red-300 mb-2 flex items-center">
+                      <span className="mr-2">❌</span> Deal Unsuccessful
+                    </div>
+                    <div className="text-xs text-red-200 space-y-1">
+                      <div>• Asset Amount: {deal.assetAmount}</div>
+                      <div>• Asset Token: {getTokenName(deal.assetToken)}</div>
+                      <div>• Payment Token: {getTokenName(deal.payToken)}</div>
+                      <div>• Reason: Ask and bid did not match within threshold</div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Debug Info */}
-            <div className="pt-3 border-t text-xs text-gray-500">
-              <div>Debug: isGuest={isGuest.toString()}, canBecomeBuyer={isPotentialBuyer.toString()}, address={address ? 'connected' : 'not connected'}</div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

@@ -6,16 +6,17 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { useDealsQuery } from "../../src/hooks/useDealsQuery";
 import { useBlindEscrow } from "../../src/hooks/useBlindEscrow";
-import { DealInfo } from "@/lib/types";
+import { DealInfo, DealState } from "@/lib/types";
 import WalletButton from "@/components/WalletButton";
+import { useAccount } from 'wagmi';
 import SimpleFHE from "../../src/components/SimpleFHE";
 import FHETest from "../../src/components/FHETest";
+import Logo from "../../src/components/Logo";
 import Link from "next/link";
 import { MOCK_TOKENS } from "@/abi/MockTokenAddresses";
-import { DeploymentInfo } from "@/components/DeploymentInfo";
-import { TokenBalance } from "@/components/TokenBalance";
 
 export default function MarketplacePage() {
+  const { address } = useAccount();
   const [currentPage, setCurrentPage] = useState(1);
   const dealsPerPage = 6;
   
@@ -25,13 +26,20 @@ export default function MarketplacePage() {
     offset: (currentPage - 1) * dealsPerPage
   });
   
+  // Fetch all deals for stats (no pagination, newest first)
+  const { openDeals: allDeals, loading: statsLoading } = useDealsQuery({ 
+    limit: 1000, // Get all deals for stats
+    offset: 0
+  });
+  
   // Debug pagination
   console.log('🔍 Pagination debug:', {
     currentPage,
     dealsPerPage,
     offset: (currentPage - 1) * dealsPerPage,
     totalDeals,
-    dealsCount: openDeals.length
+    dealsCount: openDeals.length,
+    allDealsCount: allDeals.length
   });
   const { createOpenWithAsk } = useBlindEscrow();
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -40,8 +48,8 @@ export default function MarketplacePage() {
   const [currentStep, setCurrentStep] = useState<string>("");
   const [formData, setFormData] = useState({
     assetAmount: "",
-    assetToken: MOCK_TOKENS.MOCK_USDC, // MockUSDC
-    payToken: MOCK_TOKENS.MOCK_DAI, // MockDAI
+    assetToken: MOCK_TOKENS.Z_USDC, // Z-USDC
+    payToken: MOCK_TOKENS.Z_DAI, // Z-DAI
     askAmount: "",
     threshold: "",
   });
@@ -125,17 +133,20 @@ export default function MarketplacePage() {
             </Link>
             <WalletButton />
           </div>
-          <h1 className="text-4xl md:text-5xl font-black text-white mt-6 mb-4">
-            <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">Marketplace</span>
-          </h1>
+          <div className="flex items-center space-x-4 mt-6 mb-4">
+            <Logo size="md" />
+            <h1 className="text-4xl md:text-5xl font-black text-white">
+              <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">Marketplace</span>
+            </h1>
+          </div>
           <p className="text-xl text-gray-300">
             Discover and participate in open trading deals
           </p>
         </div>
 
-        {/* FHE Test Component */}
-        <SimpleFHE />
-        <FHETest />
+        {/* FHE Test Component - Hidden for now */}
+        {/* <SimpleFHE />
+        <FHETest /> */}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -144,7 +155,7 @@ export default function MarketplacePage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-400">Open Deals</p>
-                  <p className="text-2xl font-bold text-white">{openDeals.length}</p>
+                  <p className="text-2xl font-bold text-white">{statsLoading ? '...' : allDeals.length}</p>
                 </div>
                 <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center">
                   <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -159,12 +170,12 @@ export default function MarketplacePage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-400">Total Volume</p>
-                  <p className="text-2xl font-bold text-white">$0</p>
+                  <p className="text-sm font-medium text-gray-400">Total Deals</p>
+                  <p className="text-2xl font-bold text-white">{statsLoading ? '...' : allDeals.length}</p>
                 </div>
                 <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center">
                   <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
                 </div>
               </div>
@@ -175,12 +186,12 @@ export default function MarketplacePage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-400">Active Users</p>
-                  <p className="text-2xl font-bold text-white">0</p>
+                  <p className="text-sm font-medium text-gray-400">Settled Deals</p>
+                  <p className="text-2xl font-bold text-white">{statsLoading ? '...' : allDeals.filter(deal => deal.state === DealState.Settled).length}</p>
                 </div>
                 <div className="w-12 h-12 bg-purple-500/20 rounded-full flex items-center justify-center">
                   <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
               </div>
@@ -323,15 +334,6 @@ export default function MarketplacePage() {
           </Card>
         )}
 
-        {/* Token Portfolio */}
-        <div className="mb-8">
-          <TokenBalance />
-        </div>
-
-        {/* Deployment Information */}
-        <div className="mb-8">
-          <DeploymentInfo />
-        </div>
 
         {/* Deals Grid */}
         {loading ? (
@@ -364,7 +366,7 @@ export default function MarketplacePage() {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
               {openDeals.map((deal: DealInfo) => (
                 <DealCard 
                   key={deal.id} 

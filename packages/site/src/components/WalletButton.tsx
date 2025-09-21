@@ -4,6 +4,7 @@ import { useAccount, useConnect, useDisconnect, useSwitchChain } from 'wagmi'
 import { injected } from 'wagmi/connectors'
 import { sepolia } from 'wagmi/chains'
 import { useCallback, useMemo, useState, useEffect } from 'react'
+import Link from 'next/link'
 
 export default function WalletButton() {
   const { address, isConnected, chain } = useAccount()
@@ -78,20 +79,32 @@ export default function WalletButton() {
 
   if (isConnected) {
     return (
-      <div className="inline-flex items-center px-6 py-3 rounded-full bg-gradient-to-r from-green-500/20 to-emerald-500/20 backdrop-blur-sm border border-green-500/30 text-white">
-        <svg className="w-4 h-4 mr-2 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-        </svg>
-        <span className="text-sm font-medium">
-          Connected: {address?.slice(0, 6)}...{address?.slice(-4)}
-        </span>
-        <button
-          onClick={disconnectWallet}
-          disabled={busy}
-          className="ml-2 text-xs text-gray-300 hover:text-white underline"
+      <div className="flex items-center space-x-3">
+        <Link 
+          href="/portfolio"
+          className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-blue-500/20 to-purple-500/20 backdrop-blur-sm border border-blue-500/30 text-white hover:border-blue-500/50 transition-all duration-300"
         >
-          Disconnect
-        </button>
+          <svg className="w-4 h-4 mr-2 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+          <span className="text-sm font-medium">Portfolio</span>
+        </Link>
+        
+        <div className="inline-flex items-center px-6 py-3 rounded-full bg-gradient-to-r from-green-500/20 to-emerald-500/20 backdrop-blur-sm border border-green-500/30 text-white">
+          <svg className="w-4 h-4 mr-2 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+          </svg>
+          <span className="text-sm font-medium">
+            Connected: {address?.slice(0, 6)}...{address?.slice(-4)}
+          </span>
+          <button
+            onClick={disconnectWallet}
+            disabled={busy}
+            className="ml-2 text-xs text-gray-300 hover:text-white underline"
+          >
+            Disconnect
+          </button>
+        </div>
       </div>
     )
   }
