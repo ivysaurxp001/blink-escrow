@@ -56,8 +56,8 @@ try {
   zUSDCAddress = usdcMatch[1];
   zDAIAddress = daiMatch[1];
   
-  console.log(`✅ Z-USDC deployed at: ${zUSDCAddress}`);
-  console.log(`✅ Z-DAI deployed at: ${zDAIAddress}\n`);
+  console.log(`✅ MockUSDC deployed at: ${zUSDCAddress}`);
+  console.log(`✅ MockDAI deployed at: ${zDAIAddress}\n`);
   
 } catch (error) {
   console.error('❌ Failed to deploy Mock Tokens:', error.message);
@@ -212,11 +212,11 @@ try {
           address: blindEscrowAddress,
           explorer: `https://sepolia.etherscan.io/address/${blindEscrowAddress}`
         },
-        Z_USDC: {
+        MockUSDC: {
           address: zUSDCAddress,
           explorer: `https://sepolia.etherscan.io/address/${zUSDCAddress}`
         },
-        Z_DAI: {
+        MockDAI: {
           address: zDAIAddress,
           explorer: `https://sepolia.etherscan.io/address/${zDAIAddress}`
         }
@@ -262,8 +262,8 @@ NEXT_PUBLIC_FHEVM_CHAIN_ID=11155111
 console.log('\n🎉 Full deployment completed successfully on Sepolia!');
 console.log('\n📋 Summary:');
 console.log(`   • BlindEscrow: ${blindEscrowAddress}`);
-console.log(`   • Z-USDC: ${zUSDCAddress}`);
-console.log(`   • Z-DAI: ${zDAIAddress}`);
+console.log(`   • MockUSDC: ${zUSDCAddress}`);
+console.log(`   • MockDAI: ${zDAIAddress}`);
 console.log('\n🚀 Next steps:');
 console.log('   1. Start FHEVM relayer: npm run relayer');
 console.log('   2. Start frontend: cd ../site && npm run dev');
@@ -274,5 +274,5 @@ console.log('   • Approve tokens before creating deals');
 console.log('   • Get Sepolia ETH from faucet if needed');
 console.log('\n🔗 Sepolia Explorer:');
 console.log(`   • BlindEscrow: https://sepolia.etherscan.io/address/${blindEscrowAddress}`);
-console.log(`   • Z-USDC: https://sepolia.etherscan.io/address/${zUSDCAddress}`);
-console.log(`   • Z-DAI: https://sepolia.etherscan.io/address/${zDAIAddress}`);
+console.log(`   • MockUSDC: https://sepolia.etherscan.io/address/${zUSDCAddress}`);
+console.log(`   • MockDAI: https://sepolia.etherscan.io/address/${zDAIAddress}`);
