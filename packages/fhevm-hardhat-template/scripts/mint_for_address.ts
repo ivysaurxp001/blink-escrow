@@ -5,11 +5,11 @@ async function main() {
   console.log("Deployer:", deployer.address);
 
   // Địa chỉ token từ deployment mới nhất
-  const MOCK_USDC_ADDRESS = "0x72D4e300767b2Bb95250907b1B177A0Fbff3C273"; // MockUSDC mới
-  const MOCK_DAI_ADDRESS = "0xEFf11B6A1104F198b791EAE158Fdf3c62185bf2E";   // MockDAI mới
+  const MOCK_USDC_ADDRESS = "0x4954c87dC09a479e33561C4E5537296701Ef1733"; // MockUSDC mới
+  const MOCK_DAI_ADDRESS = "0xB0c41a92641f64a3c804CDD1c779cec17a253681";   // MockDAI mới
   
   // Địa chỉ account cần mint (từ environment variable hoặc hardcode)
-  const targetAddress = process.env.TARGET_ADDRESS || "0xd8FF12Afb233f53666a22373e864c3e23DcF7495";
+  const targetAddress = process.env.TARGET_ADDRESS || "0x8d30010878d95C7EeF78e543Ee2133db846633b8";
   
   if (!targetAddress) {
     console.error("Usage: TARGET_ADDRESS=0x1234... npx hardhat run scripts/mint_for_address.ts --network sepolia");

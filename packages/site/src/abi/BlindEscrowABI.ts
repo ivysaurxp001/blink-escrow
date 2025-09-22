@@ -823,6 +823,40 @@ export const BlindEscrowABI = {
         "internalType": "uint256",
         "name": "dealId",
         "type": "uint256"
+      }
+    ],
+    "name": "revealMatchWithValues",
+    "outputs": [
+      {
+        "internalType": "ebool",
+        "name": "matched",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "euint32",
+        "name": "askClear",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "euint32",
+        "name": "bidClear",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "euint32",
+        "name": "thresholdClear",
+        "type": "bytes32"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "dealId",
+        "type": "uint256"
       },
       {
         "internalType": "euint32",

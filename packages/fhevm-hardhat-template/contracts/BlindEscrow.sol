@@ -273,6 +273,38 @@ contract BlindEscrow is Ownable {
         return matched;
     }
 
+    /**
+     * @dev Reveal match với plaintext values cho frontend.
+     * Trả về (bool matched, uint32 askClear, uint32 bidClear, uint32 thresholdClear)
+     * Relayer sẽ decrypt và trả về plaintext values.
+     */
+    function revealMatchWithValues(uint256 dealId) external returns (
+        ebool matched, 
+        euint32 askClear, 
+        euint32 bidClear, 
+        euint32 thresholdClear
+    ) {
+        Deal storage d = deals[dealId];
+        require(d.state == DealState.Ready, "not ready");
+        require(d.hasAsk && d.hasBid, "missing prices");
+        require(d.hasEncThreshold, "threshold not set");
+
+        // Return encrypted values for relayer to decrypt
+        askClear = d.encAsk;
+        bidClear = d.encBid;
+        thresholdClear = d.encThreshold;
+
+        // Calculate match
+        euint32 askPlusTh = FHE.add(d.encAsk, d.encThreshold);
+        euint32 bidPlusTh = FHE.add(d.encBid, d.encThreshold);
+
+        ebool cond1 = FHE.le(d.encBid, askPlusTh); // bid <= ask + th
+        ebool cond2 = FHE.le(d.encAsk, bidPlusTh); // ask <= bid + th
+        matched = FHE.and(cond1, cond2);
+        
+        return (matched, askClear, bidClear, thresholdClear);
+    }
+
 
     /**
      * @dev Lấy encrypted ask price

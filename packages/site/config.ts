@@ -3,7 +3,7 @@ export const config = {
   // Chain configuration - Update these values after deployment
   CHAIN_ID: process.env.NEXT_PUBLIC_CHAIN_ID || "11155111", // Sepolia
   RELAYER_URL: process.env.NEXT_PUBLIC_RELAYER_URL || "http://localhost:3001",
-  BLIND_ESCROW_ADDR: process.env.NEXT_PUBLIC_BLIND_ESCROW_ADDR || "0xBA80Bd4BEB149a7BCa886BAe2d9F2A97EC521CaA", // Deployed on Sepolia
+  BLIND_ESCROW_ADDR: process.env.NEXT_PUBLIC_BLIND_ESCROW_ADDR || "0x64763CCc67549FbC83cc7CD59B67965a1fB8DBDe", // Deployed on Sepolia
   
   // FHEVM Configuration
   FHEVM_RELAYER_URL: process.env.NEXT_PUBLIC_FHEVM_RELAYER_URL || "http://localhost:3001",
