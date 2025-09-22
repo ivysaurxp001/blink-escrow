@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/Input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { useBlindEscrow } from "@/hooks/useBlindEscrow";
 import { useAccount } from "wagmi";
-import { MOCK_USDC_ADDR, MOCK_DAI_ADDR } from "@/config/contracts";
+import { MOCK_USDC_ADDR, MOCK_DAI_ADDR } from "../../config/contracts";
 import { parseUnits } from "viem";
 
 export default function NewP2PPage() {

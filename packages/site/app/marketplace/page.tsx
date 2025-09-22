@@ -48,8 +48,8 @@ export default function MarketplacePage() {
   const [currentStep, setCurrentStep] = useState<string>("");
   const [formData, setFormData] = useState({
     assetAmount: "",
-    assetToken: MOCK_TOKENS.Z_USDC, // Z-USDC
-    payToken: MOCK_TOKENS.Z_DAI, // Z-DAI
+    assetToken: MOCK_TOKENS.MOCK_USDC, // Z-USDC
+    payToken: MOCK_TOKENS.MOCK_DAI, // Z-DAI
     askAmount: "",
     threshold: "",
   });

@@ -1,7 +1,8 @@
 import { useCallback, useMemo } from "react";
 import { useAccount, useWalletClient, usePublicClient, useReadContract } from "wagmi";
 import { Address, DealInfo, DealState, DealMode } from "@/lib/types";
-import { BLIND_ESCROW_ADDR } from "@/config/contracts";
+import { BLIND_ESCROW_ADDR } from "../config/contracts";
+import { config } from "../../config";
 import { BlindEscrowABI } from "@/abi/BlindEscrowABI";
 import { parseAbiItem, encodeFunctionData, decodeFunctionResult } from "viem";
 import { useFhevm } from "@/fhevm/useFhevm";
@@ -13,6 +14,15 @@ export function useBlindEscrow() {
   const publicClient = usePublicClient();
   const { fhevm, encrypt32, isMockMode, relayerView, reinitialize } = useFhevm();
   const { getDealValues, setDealAsk, setDealBid, setDealThreshold } = useDealValues();
+
+  // Helper function to get contract address with fallback
+  const getContractAddress = useCallback(() => {
+    const contractAddress = BLIND_ESCROW_ADDR || config.BLIND_ESCROW_ADDR;
+    if (!contractAddress) {
+      throw new Error("BlindEscrow contract address is not defined. Please check config files");
+    }
+    return contractAddress as `0x${string}`;
+  }, []);
 
   // For now, we'll use a mock contract since we need to handle the contract interaction differently
   // In a real implementation, you would use the walletClient to create contract instances
@@ -198,9 +208,10 @@ export function useBlindEscrow() {
       }
       
       const nextDealId = BigInt((nextDealIdResult as any).data);
-      const newDealId = Number(nextDealId) - 1; // The deal we just created
+      const newDealId = Number(nextDealId); // The deal we just created (nextDealId is already incremented)
       
       console.log("🎉 New P2P deal created with ID:", newDealId);
+      console.log("🔍 Next deal ID after creation:", nextDealId.toString());
       
       return newDealId;
     } catch (error) {
@@ -220,8 +231,26 @@ export function useBlindEscrow() {
     if (!walletClient) throw new Error("No wallet client");
     if (!address) throw new Error("No wallet address");
     
+    // Get contract address with validation
+    const contractAddress = getContractAddress();
+    
+    // Validate parameters
+    if (!params.assetToken) {
+      throw new Error("Asset token address is required");
+    }
+    if (!params.payToken) {
+      throw new Error("Pay token address is required");
+    }
+    if (!params.assetAmount || params.assetAmount <= 0) {
+      throw new Error("Asset amount must be greater than 0");
+    }
+    
     try {
       console.log("🔐 Creating OPEN deal with ask + threshold...");
+      console.log("🔍 Contract address:", contractAddress);
+      console.log("🔍 Asset token:", params.assetToken);
+      console.log("🔍 Pay token:", params.payToken);
+      console.log("🔍 Asset amount:", params.assetAmount.toString());
       
       // Step 1: Approve asset token for BlindEscrow contract
       console.log("📝 Step 1: Approving asset token...");
@@ -302,9 +331,10 @@ export function useBlindEscrow() {
         }
 
         const nextDealId = BigInt((nextDealIdResult as any).data);
-        const newDealId = Number(nextDealId) - 1;
+        const newDealId = Number(nextDealId); // The deal we just created (nextDealId is already incremented)
 
         console.log("🎉 Fallback deal created with ID:", newDealId);
+        console.log("🔍 Next deal ID after creation:", nextDealId.toString());
         console.log("💡 Please submit ask and threshold later when relayer is ready");
 
         return { dealId: newDealId, hash: createHash, fallback: true };
@@ -357,9 +387,10 @@ export function useBlindEscrow() {
       }
       
       const nextDealId = BigInt((nextDealIdResult as any).data);
-      const newDealId = Number(nextDealId) - 1; // The deal we just created
+      const newDealId = Number(nextDealId); // The deal we just created (nextDealId is already incremented)
       
       console.log("🎉 New deal created with ID:", newDealId);
+      console.log("🔍 Next deal ID after creation:", nextDealId.toString());
       
       return { dealId: newDealId, hash: createHash };
     } catch (error) {

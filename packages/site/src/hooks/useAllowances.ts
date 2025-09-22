@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import { useAccount, useWalletClient } from "wagmi";
 import { ethers } from "ethers";
 import { Address } from "@/lib/types";
-import { BLIND_ESCROW_ADDR } from "@/config/contracts";
+import { BLIND_ESCROW_ADDR } from "../config/contracts";
 
 const ERC20_ABI = [
   "function allowance(address owner, address spender) external view returns (uint256)",

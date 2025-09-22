@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { useAccount, usePublicClient } from "wagmi";
 import { DealInfo, DealMode, DealState } from "@/lib/types";
-import { BLIND_ESCROW_ADDR } from "@/config/contracts";
+import { BLIND_ESCROW_ADDR } from "../config/contracts";
 import { BlindEscrowABI } from "@/abi/BlindEscrowABI";
 import { encodeFunctionData, decodeFunctionResult } from "viem";
 
@@ -148,11 +148,11 @@ export function useDealsQuery(options: { limit?: number; offset?: number } = {})
         return;
       }
       
-      // Store total deals count
-      setTotalDeals(nextDealId - 1);
+      // Store total deals count (nextDealId is already the count of existing deals)
+      setTotalDeals(nextDealId);
       
       // Fetch deals with pagination (newest first)
-      const totalDealsCount = nextDealId - 1;
+      const totalDealsCount = nextDealId;
       const startId = Math.max(1, totalDealsCount - offset - limit + 1);
       const endId = totalDealsCount - offset + 1;
       const fetchedDeals: DealInfo[] = [];

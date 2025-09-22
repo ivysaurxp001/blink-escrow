@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { useAccount } from "wagmi";
 import { useBlindEscrow } from "@/hooks/useBlindEscrow";
 import { shortAddress } from "@/lib/format";
-import { MOCK_USDC_ADDR, MOCK_DAI_ADDR } from "@/config/contracts";
+import { MOCK_USDC_ADDR, MOCK_DAI_ADDR } from "../../config/contracts";
 
 export default function MePage() {
   const { address, isConnected } = useAccount();
