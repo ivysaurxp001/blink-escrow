@@ -227,5 +227,6 @@ export function useDealsQuery(options: { limit?: number; offset?: number } = {})
     error,
     totalDeals,
     refetch: fetchDeals,
+    getDeal: fetchDealInfo, // Export fetchDealInfo as getDeal
   };
 }

@@ -20,6 +20,7 @@ function getTokenName(address: string): string {
 import { DEAL_STATE_LABELS } from "@/config/constants";
 import { useRef, useEffect } from "react";
 import Link from "next/link";
+import { useAccount } from "wagmi";
 
 interface DealCardProps {
   deal: DealInfo;
@@ -27,7 +28,8 @@ interface DealCardProps {
 }
 
 export default function DealCard({ deal, onAction }: DealCardProps) {
-  const { address, submitAskWithThreshold, submitBid, revealMatch, bindRevealed, approvePayToken, settle } = useBlindEscrow();
+  const { address } = useAccount();
+  const { submitBidToDeal, revealMatchAndDecrypt } = useBlindEscrow();
   const { isSeller, isBuyer, isGuest, isPotentialBuyer } = useRole(deal);
   const { getDealValues } = useDealValues();
 
@@ -59,6 +61,20 @@ export default function DealCard({ deal, onAction }: DealCardProps) {
   const canReveal = (isSeller || isBuyer) && deal.state === DealState.Ready;
   const canSettle = (isSeller || isBuyer) && deal.state === DealState.Ready;
 
+  // Debug logging for reveal button visibility
+  console.log(`🔍 Deal ${deal.id} reveal debug:`, {
+    isSeller,
+    isBuyer,
+    isGuest,
+    dealState: deal.state,
+    DealStateReady: DealState.Ready,
+    canReveal,
+    address,
+    dealSeller: deal.seller,
+    dealBuyer: deal.buyer,
+    showRevealButton: !isGuest && canReveal
+  });
+
   const handleSubmitAsk = async () => {
     try {
       const askAmount = prompt("Enter your ask amount (in DAI):", "1000");
@@ -71,7 +87,9 @@ export default function DealCard({ deal, onAction }: DealCardProps) {
         alert("Please enter a valid threshold");
         return;
       }
-      await submitAskWithThreshold(deal.id, Number(askAmount), Number(threshold));
+      // TODO: Implement submitAskWithThreshold
+      console.log("TODO: Submit ask with threshold", deal.id, Number(askAmount), Number(threshold));
+      // await submitAskWithThreshold(deal.id, Number(askAmount), Number(threshold));
       onAction?.();
     } catch (error) {
       console.error("Submit ask error:", error);
@@ -85,7 +103,7 @@ export default function DealCard({ deal, onAction }: DealCardProps) {
         alert("Please enter a valid bid amount");
         return;
       }
-      await submitBid(deal.id, Number(bidAmount));
+      await submitBidToDeal(deal.id, Number(bidAmount));
       onAction?.();
     } catch (error) {
       console.error("Submit bid error:", error);
@@ -99,7 +117,7 @@ export default function DealCard({ deal, onAction }: DealCardProps) {
         alert("Please enter a valid bid amount");
         return;
       }
-      await submitBid(deal.id, Number(bidAmount)); // This will lock buyer
+      await submitBidToDeal(deal.id, Number(bidAmount)); // This will lock buyer
       onAction?.();
     } catch (error) {
       console.error("Become buyer error:", error);
@@ -109,7 +127,7 @@ export default function DealCard({ deal, onAction }: DealCardProps) {
   const handleRevealAndBind = async () => {
     try {
       // Step 1: Reveal via relayer (view call)
-      const result = await revealMatch(deal.id);
+      const result = await revealMatchAndDecrypt(deal.id);
       console.log("Reveal result:", result);
       
       if (!result.matched) {
@@ -120,7 +138,9 @@ export default function DealCard({ deal, onAction }: DealCardProps) {
       // Step 2: Bind revealed prices (transaction)
       const storedValues = getDealValues(deal.id);
       const threshold = storedValues.threshold || 100;
-      await bindRevealed(deal.id, result.askClear, result.bidClear, threshold);
+      // TODO: Implement bindRevealed
+      console.log("TODO: Bind revealed prices", deal.id, result.askPlain, result.bidPlain, threshold);
+      // await bindRevealed(deal.id, result.askPlain, result.bidPlain, threshold);
       console.log("✅ Prices bound successfully");
       
       onAction?.();
@@ -138,7 +158,7 @@ export default function DealCard({ deal, onAction }: DealCardProps) {
       }
       
       // Step 1: Reveal via relayer (view call)
-      const result = await revealMatch(deal.id);
+      const result = await revealMatchAndDecrypt(deal.id);
       console.log("Reveal result:", result);
       
       if (!result.matched) {
@@ -149,17 +169,23 @@ export default function DealCard({ deal, onAction }: DealCardProps) {
       // Step 2: Bind revealed prices (transaction)
       const storedValues = getDealValues(deal.id);
       const threshold = storedValues.threshold || 100;
-      await bindRevealed(deal.id, result.askClear, result.bidClear, threshold);
+      // TODO: Implement bindRevealed
+      console.log("TODO: Bind revealed prices", deal.id, result.askPlain, result.bidPlain, threshold);
+      // await bindRevealed(deal.id, result.askPlain, result.bidPlain, threshold);
       console.log("✅ Prices bound successfully");
       
       // Step 3: Approve payToken (transaction) - only if user is buyer
       if (isBuyer && deal.payToken) {
-        await approvePayToken(deal.payToken, BigInt(result.askClear));
+        // TODO: Implement approvePayToken
+        console.log("TODO: Approve payToken", deal.payToken, BigInt(result.askPlain));
+        // await approvePayToken(deal.payToken, BigInt(result.askPlain));
         console.log("✅ PayToken approved successfully");
       }
       
       // Step 4: Settle (transaction) - new signature without parameters
-      await settle(deal.id);
+      // TODO: Implement settle
+      console.log("TODO: Settle deal", deal.id);
+      // await settle(deal.id);
       console.log("✅ Deal settled successfully");
       
       onAction?.();

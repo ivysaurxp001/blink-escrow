@@ -3,6 +3,7 @@
 import { useParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { useBlindEscrow } from '@/hooks/useBlindEscrow';
+import { useDealsQuery } from '@/hooks/useDealsQuery';
 import { useDealValues } from '@/contexts/DealValuesContext';
 import { DealInfo, DealState } from '@/lib/types';
 import { formatDealState, getStateColor, shortAddress } from '@/lib/format';
@@ -27,7 +28,8 @@ export default function DealDetailPage() {
   const params = useParams();
   const dealId = parseInt(params.id as string);
   const { address } = useAccount();
-  const { getDeal, submitBid, revealMatch, bindRevealed, approvePayToken, settle, cancelDeal } = useBlindEscrow();
+  const { submitBidToDeal, revealMatchAndDecrypt } = useBlindEscrow();
+  const { getDeal } = useDealsQuery();
   const { getDealValues } = useDealValues();
   
   const [deal, setDeal] = useState<DealInfo | null>(null);
@@ -40,7 +42,9 @@ export default function DealDetailPage() {
     const loadDeal = async () => {
       try {
         setLoading(true);
+        console.log('🔍 Loading deal with ID:', dealId);
         const dealData = await getDeal(dealId);
+        console.log('🔍 Deal loaded successfully:', dealData);
         console.log('🔍 Deal debug info:', {
           dealId,
           seller: dealData.seller,
@@ -55,6 +59,7 @@ export default function DealDetailPage() {
         });
         setDeal(dealData);
       } catch (err) {
+        console.error('❌ Error loading deal:', err);
         setError(err instanceof Error ? err.message : 'Failed to load deal');
       } finally {
         setLoading(false);
@@ -68,14 +73,22 @@ export default function DealDetailPage() {
 
   const { isSeller, isBuyer, isGuest, isPotentialBuyer } = useRole(deal);
   
-  // Debug: Check wallet connection
-  console.log("🔍 Wallet debug:", { 
+  // Debug: Check wallet connection and reveal conditions
+  console.log("🔍 Deal detail page debug:", { 
     address, 
     isConnected: !!address,
     isSeller, 
     isBuyer, 
     isGuest, 
-    isPotentialBuyer 
+    isPotentialBuyer,
+    dealState: deal?.state,
+    dealMode: deal?.mode,
+    DealStateReady: DealState.Ready,
+    isP2P: deal?.mode === 0,
+    isOPEN: deal?.mode === 1,
+    showRevealButton: deal?.state === DealState.Ready && (isSeller || isBuyer),
+    showP2PSection: deal?.mode === 0,
+    showGeneralSection: deal?.state === DealState.Ready && (isSeller || isBuyer)
   });
 
   // Action handlers
@@ -84,7 +97,7 @@ export default function DealDetailPage() {
     
     try {
       setActionLoading('submitBid');
-      await submitBid(deal.id, Number(bidAmount));
+      await submitBidToDeal(deal.id, Number(bidAmount));
       // Reload deal data
       const updatedDeal = await getDeal(dealId);
       setDeal(updatedDeal);
@@ -100,7 +113,8 @@ export default function DealDetailPage() {
     
     try {
       setActionLoading('submitAsk');
-      await submitAskWithThreshold(deal.id, Number(askAmount), Number(threshold));
+      // TODO: Implement submitAskWithThreshold
+      console.log('TODO: Implement submitAskWithThreshold', deal.id, askAmount, threshold);
       
       // Reload deal data
       const updatedDeal = await getDeal(dealId);
@@ -122,7 +136,7 @@ export default function DealDetailPage() {
       const storedValues = getDealValues(deal.id);
       console.log("🔍 Stored values before reveal:", storedValues);
       
-      const result = await revealMatch(deal.id);
+      const result = await revealMatchAndDecrypt(deal.id);
       
       if (!result.matched) {
         console.log("❌ No match found, stopping here");
@@ -130,7 +144,8 @@ export default function DealDetailPage() {
       }
       
       const threshold = storedValues.threshold || 100;
-      await bindRevealed(deal.id, result.askClear, result.bidClear, threshold);
+      // TODO: Implement bindRevealed
+      console.log('TODO: Implement bindRevealed', deal.id, result.askPlain, result.bidPlain, threshold);
       
       // Reload deal data
       const updatedDeal = await getDeal(dealId);
@@ -153,7 +168,8 @@ export default function DealDetailPage() {
       // For now, we'll skip this step as it needs proper implementation
       
       // Step 2: Settle the deal
-      await settle(deal.id);
+      // TODO: Implement settle
+      console.log('TODO: Implement settle', deal.id);
       
       // Reload deal data
       const updatedDeal = await getDeal(dealId);
@@ -170,7 +186,8 @@ export default function DealDetailPage() {
     
     try {
       setActionLoading('cancel');
-      await cancelDeal(deal.id);
+      // TODO: Implement cancelDeal
+      console.log('TODO: Implement cancelDeal', deal.id);
       
       // Reload deal data
       const updatedDeal = await getDeal(dealId);
@@ -183,6 +200,7 @@ export default function DealDetailPage() {
   };
 
   if (loading) {
+    console.log('🔍 Deal detail page: Loading state');
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
         <div className="container mx-auto px-4 py-8">
@@ -191,6 +209,9 @@ export default function DealDetailPage() {
               <div className="h-8 bg-white/20 rounded mb-4"></div>
               <div className="h-64 bg-white/20 rounded"></div>
             </div>
+            <div className="mt-4 text-center text-white/60">
+              Loading deal {dealId}...
+            </div>
           </div>
         </div>
       </div>
@@ -198,6 +219,7 @@ export default function DealDetailPage() {
   }
 
   if (error || !deal) {
+    console.log('🔍 Deal detail page: Error or no deal state', { error, deal });
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
         <div className="container mx-auto px-4 py-8">
@@ -206,6 +228,11 @@ export default function DealDetailPage() {
               <CardContent className="p-6">
                 <h1 className="text-2xl font-bold text-red-300 mb-4">Error</h1>
                 <p className="text-gray-300">{error || 'Deal not found'}</p>
+                <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-400/20 rounded-lg">
+                  <p className="text-yellow-300 text-sm">
+                    🔍 DEBUG: Deal ID = {dealId}, Error = {error}, Deal = {deal ? 'exists' : 'null'}
+                  </p>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -395,14 +422,20 @@ export default function DealDetailPage() {
                 </div>
               )}
 
-              {deal.state === DealState.Ready && (isSeller || isBuyer) && (
+              {/* DEBUG: Always show reveal button for testing */}
+              {deal.state === DealState.Ready && (
                 <div className="pt-4 border-t border-white/10">
+                  <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-400/20 rounded-lg">
+                    <p className="text-xs text-yellow-300">
+                      🔍 DEBUG: Deal state = {deal.state}, isSeller = {isSeller ? 'true' : 'false'}, isBuyer = {isBuyer ? 'true' : 'false'}
+                    </p>
+                  </div>
                   <Button 
                     onClick={handleRevealAndBind}
                     disabled={actionLoading === 'reveal'}
                     className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white border-0 shadow-lg hover:shadow-orange-500/25 transform hover:-translate-y-0.5 transition-all duration-200"
                   >
-                    {actionLoading === 'reveal' ? 'Revealing...' : 'Reveal & Bind'}
+                    {actionLoading === 'reveal' ? 'Revealing...' : 'Reveal & Bind (DEBUG)'}
                   </Button>
                   <p className="text-xs text-gray-400 mt-3 text-center bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-400/20 p-2 rounded-lg backdrop-blur-sm">
                     After reveal, if matched = true, you can settle. If matched = false, deal will be unsuccessful.

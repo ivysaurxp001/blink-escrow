@@ -393,7 +393,12 @@ export default function MarketplacePage() {
                 <DealCard 
                   key={deal.id} 
                   deal={deal} 
-                  onAction={refetch}
+                  onAction={async () => {
+                    console.log("🔄 Refreshing deals after action...");
+                    await refetch();
+                    await refetchStats();
+                    console.log("✅ Deals refreshed successfully");
+                  }}
                 />
               ))}
             </div>
