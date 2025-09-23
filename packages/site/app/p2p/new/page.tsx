@@ -20,8 +20,8 @@ export default function NewP2PDealPage() {
   const [formData, setFormData] = useState({
     buyerAddress: "",
     assetAmount: "",
-    assetToken: MOCK_TOKENS.Z_USDC, // Z-USDC
-    payToken: MOCK_TOKENS.Z_DAI, // Z-DAI
+    assetToken: MOCK_TOKENS.MOCK_USDC, // Z-USDC
+    payToken: MOCK_TOKENS.MOCK_DAI, // Z-DAI
     askAmount: "",
     threshold: "",
   });
@@ -51,8 +51,8 @@ export default function NewP2PDealPage() {
       setFormData({
         buyerAddress: "",
         assetAmount: "",
-        assetToken: MOCK_TOKENS.Z_USDC,
-        payToken: MOCK_TOKENS.Z_DAI,
+        assetToken: MOCK_TOKENS.MOCK_USDC,
+        payToken: MOCK_TOKENS.MOCK_DAI,
         askAmount: "",
         threshold: "",
       });

@@ -2,19 +2,19 @@
   "network": "sepolia",
   "chainId": "11155111",
   "deployment": {
-    "timestamp": "2024-12-19T10:30:00Z",
+    "timestamp": "2025-01-27T10:30:00.000Z",
     "contracts": {
       "BlindEscrow": {
-        "address": "0xbAaF7CDeC56830b7415525faBd8602E2199DEfaF",
-        "explorer": "https://sepolia.etherscan.io/address/0xbAaF7CDeC56830b7415525faBd8602E2199DEfaF"
+        "address": "0x544a16a71B729C39E3a6a2D84963d6732f7cC622",
+        "explorer": "https://sepolia.etherscan.io/address/0x544a16a71B729C39E3a6a2D84963d6732f7cC622"
       },
       "Z_USDC": {
-        "address": "0x72D4e300767b2Bb95250907b1B177A0Fbff3C273",
-        "explorer": "https://sepolia.etherscan.io/address/0x72D4e300767b2Bb95250907b1B177A0Fbff3C273"
+        "address": "0xf0Feb273800D5b5Ad6bf5C2c1c6470B0D9bc2C47",
+        "explorer": "https://sepolia.etherscan.io/address/0xf0Feb273800D5b5Ad6bf5C2c1c6470B0D9bc2C47"
       },
       "Z_DAI": {
-        "address": "0xEFf11B6A1104F198b791EAE158Fdf3c62185bf2E",
-        "explorer": "https://sepolia.etherscan.io/address/0xEFf11B6A1104F198b791EAE158Fdf3c62185bf2E"
+        "address": "0x8F836a8BaD0cCa454EE150a8F643B4781B6229f6",
+        "explorer": "https://sepolia.etherscan.io/address/0x8F836a8BaD0cCa454EE150a8F643B4781B6229f6"
       }
     }
   }

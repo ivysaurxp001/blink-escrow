@@ -17,8 +17,8 @@ import { DEAL_STATE_LABELS } from '@/config/constants';
 // Function to get token name from address
 function getTokenName(address: string): string {
   const tokenMap: { [key: string]: string } = {
-    [MOCK_TOKENS.Z_USDC]: "Z-USDC",
-    [MOCK_TOKENS.Z_DAI]: "Z-DAI",
+    [MOCK_TOKENS.MOCK_USDC]: "Z-USDC",
+    [MOCK_TOKENS.MOCK_DAI]: "Z-DAI",
   };
   return tokenMap[address] || shortAddress(address);
 }

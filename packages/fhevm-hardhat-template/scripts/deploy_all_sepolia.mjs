@@ -165,12 +165,12 @@ try {
 // This file will be updated automatically when you run: npm run deploy:all:sepolia
 
 export const MOCK_TOKENS = {
-  MOCK_USDC: "${mockUSDCAddress}",
-  MOCK_DAI: "${mockDAIAddress}",
+  MOCK_USDC: "${zUSDCAddress}",
+  MOCK_DAI: "${zDAIAddress}",
 } as const;
 
-export const MOCK_USDC_ADDRESS = "${mockUSDCAddress}";
-export const MOCK_DAI_ADDRESS = "${mockDAIAddress}";
+export const MOCK_USDC_ADDRESS = "${zUSDCAddress}";
+export const MOCK_DAI_ADDRESS = "${zDAIAddress}";
 `;
   
   writeFileSync(mockTokenPath, mockTokenContent);
@@ -182,8 +182,8 @@ export const MOCK_DAI_ADDRESS = "${mockDAIAddress}";
 export const CONTRACTS: Record<string, Record<string,string>> = {
   "11155111": {
     "BlindEscrow": "${blindEscrowAddress}",
-    "MockUSDC": "${mockUSDCAddress}",
-    "MockDAI": "${mockDAIAddress}"
+    "MockUSDC": "${zUSDCAddress}",
+    "MockDAI": "${zDAIAddress}"
   }
 } as const;
 export const BLIND_ESCROW_ADDR = CONTRACTS["11155111"]?.BlindEscrow ?? "";

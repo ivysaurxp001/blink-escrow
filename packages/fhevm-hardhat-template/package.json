@@ -92,6 +92,7 @@
     "deploy:all": "npm run deploy:all:sepolia",
     "deploy:all:sepolia": "npm run compile && node scripts/deploy_all_sepolia.mjs",
     "deploy:with-addresses": "npm run compile && npx hardhat run scripts/deploy_with_addresses.ts --network sepolia",
+    "deploy:escrow-only": "npm run compile && npx hardhat run scripts/deploy_blind_escrow_only.ts --network sepolia",
     "deploy:all:localhost": "npm run compile && node scripts/deploy_all.mjs",
     "check:deployment": "node scripts/check_deployment.mjs",
     "test:compile": "node scripts/test_compile.mjs",

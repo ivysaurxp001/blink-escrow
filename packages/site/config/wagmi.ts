@@ -10,7 +10,7 @@ export const wagmiConfig = createConfig({
     injected(), // Fallback to injected
   ],
   transports: {
-    [sepolia.id]: http(process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL || 'https://sepolia.infura.io/v3/ac7264316be146b0ae56f2222773a352', {
+    [sepolia.id]: http(process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL || 'https://sepolia.infura.io/v3/09312fc6fc80421299231e18e15d26be', {
       timeout: 10000, // 10 second timeout
       retryCount: 3, // Retry 3 times
     }),

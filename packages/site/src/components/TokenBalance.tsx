@@ -146,12 +146,12 @@ export function TokenBalance() {
       </CardHeader>
       <CardContent className="space-y-4">
         <TokenBalanceItem
-          tokenAddress={MOCK_TOKENS.Z_USDC}
+          tokenAddress={MOCK_TOKENS.MOCK_USDC}
           tokenName="Z-USDC"
           decimals={6}
         />
         <TokenBalanceItem
-          tokenAddress={MOCK_TOKENS.Z_DAI}
+          tokenAddress={MOCK_TOKENS.MOCK_DAI}
           tokenName="Z-DAI"
           decimals={18}
         />

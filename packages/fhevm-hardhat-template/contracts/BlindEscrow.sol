@@ -126,7 +126,8 @@ contract BlindEscrow is Ownable {
         uint256 assetAmount,
         address payToken,
         euint32 encAsk,
-        euint32 encThreshold
+        euint32 encThreshold,
+        bytes calldata inputProof
     ) external returns (uint256 dealId) {
         require(assetToken != address(0), "assetToken=0");
         require(payToken  != address(0), "payToken=0");
@@ -150,7 +151,7 @@ contract BlindEscrow is Ownable {
         d.assetAmount = assetAmount;
         d.payToken    = payToken;
 
-        // Set ask and threshold immediately
+        // Set ask and threshold immediately (FHEVM handles external input automatically)
         d.encAsk = encAsk;
         d.hasAsk = true;
         d.encThreshold = encThreshold;
@@ -203,7 +204,7 @@ contract BlindEscrow is Ownable {
     /**
      * @dev Seller nộp encAsk và encThreshold cùng lúc (tiện hơn).
      */
-    function submitAskWithThreshold(uint256 dealId, euint32 encAsk, euint32 _encThreshold) external {
+    function submitAskWithThreshold(uint256 dealId, euint32 encAsk, euint32 _encThreshold, bytes calldata inputProof) external {
         Deal storage d = deals[dealId];
         require(d.state == DealState.Created || d.state == DealState.B_Submitted, "bad state");
         require(msg.sender == d.seller, "not seller");
@@ -230,7 +231,7 @@ contract BlindEscrow is Ownable {
      * - P2P: chỉ buyer đã chỉ định mới được submit
      * - OPEN: ai submit đầu tiên sẽ khóa làm buyer
      */
-    function submitBid(uint256 dealId, euint32 encBid) external {
+    function submitBid(uint256 dealId, euint32 encBid, bytes calldata inputProof) external {
         Deal storage d = deals[dealId];
         require(d.state == DealState.Created || d.state == DealState.A_Submitted, "bad state");
 

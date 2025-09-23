@@ -416,6 +416,11 @@ export const BlindEscrowABI = {
         "internalType": "euint32",
         "name": "encThreshold",
         "type": "bytes32"
+      },
+      {
+        "internalType": "bytes",
+        "name": "inputProof",
+        "type": "bytes"
       }
     ],
     "name": "createDealWithAsk",
@@ -882,6 +887,11 @@ export const BlindEscrowABI = {
         "internalType": "euint32",
         "name": "_encThreshold",
         "type": "bytes32"
+      },
+      {
+        "internalType": "bytes",
+        "name": "inputProof",
+        "type": "bytes"
       }
     ],
     "name": "submitAskWithThreshold",
@@ -900,6 +910,11 @@ export const BlindEscrowABI = {
         "internalType": "euint32",
         "name": "encBid",
         "type": "bytes32"
+      },
+      {
+        "internalType": "bytes",
+        "name": "inputProof",
+        "type": "bytes"
       }
     ],
     "name": "submitBid",

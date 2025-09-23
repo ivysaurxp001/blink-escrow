@@ -41,15 +41,15 @@ export default function MarketplacePage() {
     dealsCount: openDeals.length,
     allDealsCount: allDeals.length
   });
-  const { createOpenWithAsk } = useBlindEscrow();
+  const { createOpenWithAskThreshold } = useBlindEscrow();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [createSuccess, setCreateSuccess] = useState(false);
   const [currentStep, setCurrentStep] = useState<string>("");
   const [formData, setFormData] = useState({
     assetAmount: "",
-    assetToken: MOCK_TOKENS.Z_USDC, // Z-USDC
-    payToken: MOCK_TOKENS.Z_DAI, // Z-DAI
+    assetToken: MOCK_TOKENS.MOCK_USDC, // Z-USDC
+    payToken: MOCK_TOKENS.MOCK_DAI, // Z-DAI
     askAmount: "",
     threshold: "",
   });
@@ -67,7 +67,7 @@ export default function MarketplacePage() {
       console.log("🔍 Threshold:", formData.threshold);
       
       setCurrentStep("Step 1: Approving asset token...");
-      const result = await createOpenWithAsk({
+      const result = await createOpenWithAskThreshold({
         assetToken: formData.assetToken as `0x${string}`,
         assetAmount: BigInt(formData.assetAmount),
         payToken: formData.payToken as `0x${string}`,
@@ -75,12 +75,12 @@ export default function MarketplacePage() {
         threshold: parseFloat(formData.threshold),
       });
       
-      if (result.fallback) {
-        setCurrentStep("Deal created (ask/threshold will be submitted later when relayer is ready)");
-      } else {
+      if (result) {
         setCurrentStep("Deal created successfully!");
+        console.log("✅ Deal created successfully with transaction:", result.transactionHash);
+      } else {
+        setCurrentStep("Deal creation failed");
       }
-      console.log("✅ Deal created successfully with ID:", result.dealId);
       setCreateSuccess(true);
       setFormData({ 
         assetAmount: "",

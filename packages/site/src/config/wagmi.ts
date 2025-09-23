@@ -12,7 +12,7 @@ export const wagmiConfig = createConfig({
     }),
   ],
   transports: {
-    [sepolia.id]: http(process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL || 'https://sepolia.infura.io/v3/ac7264316be146b0ae56f2222773a352'), // fallback RPC
+    [sepolia.id]: http(process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL || 'https://sepolia.infura.io/v3/09312fc6fc80421299231e18e15d26be'), // fallback RPC
   },
   ssr: true, // dùng app router -> bật ssr
 })
