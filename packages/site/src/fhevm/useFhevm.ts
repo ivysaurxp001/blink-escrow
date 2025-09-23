@@ -4,13 +4,32 @@ import { useEffect, useCallback, useState } from 'react';
 import { ensureRelayerReady, userDecrypt, encrypt32Single, encryptAskThresholdBatch } from './relayerClient';
 import { getRelayerInstance } from './relayer';
 import { useAccount, useWalletClient, usePublicClient } from 'wagmi';
-import { encodeFunctionData, decodeFunctionResult } from 'viem';
+import { encodeFunctionData, decodeFunctionResult, getAbiItem } from 'viem';
 import { BlindEscrowABI } from '@/abi/BlindEscrowABI';
 import { BLIND_ESCROW_ADDR } from '@/config/contracts';
+import { FhevmDecryptionSignature } from './FhevmDecryptionSignature';
+import { GenericStringInMemoryStorage } from './GenericStringStorage';
+import { ethers } from 'ethers';
 
 // Utility function to convert Uint8Array to hex string
 function uint8ArrayToHex(uint8Array: Uint8Array): `0x${string}` {
   return `0x${Array.from(uint8Array).map(b => b.toString(16).padStart(2, '0')).join('')}` as `0x${string}`;
+}
+
+// Utility function to create ethers.Signer from wagmi walletClient
+function createEthersSigner(walletClient: any, address: string): ethers.Signer {
+  return {
+    getAddress: async () => address,
+    signTypedData: async (domain: any, types: any, message: any) => {
+      const signature = await walletClient.signTypedData({
+        domain,
+        types,
+        primaryType: types.UserDecryptRequestVerification ? 'UserDecryptRequestVerification' : 'EIP712Domain',
+        message
+      });
+      return signature;
+    }
+  } as ethers.Signer;
 }
 
 export function useFhevm() {
@@ -19,6 +38,7 @@ export function useFhevm() {
   const { address, chainId } = useAccount();
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
+  const storage = new GenericStringInMemoryStorage();
 
   useEffect(() => {
     const init = async () => {
@@ -75,10 +95,43 @@ export function useFhevm() {
       inputProofType: typeof inputProof
     });
 
+    // Step 1: Approve asset token
+    console.log("🔍 Step 1: Approving asset token...");
+    const approveData = encodeFunctionData({
+      abi: [
+        {
+          "inputs": [
+            {"internalType": "address", "name": "spender", "type": "address"},
+            {"internalType": "uint256", "name": "amount", "type": "uint256"}
+          ],
+          "name": "approve",
+          "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        }
+      ],
+      functionName: "approve",
+      args: [BLIND_ESCROW_ADDR as `0x${string}`, BigInt(params.assetAmountRaw)]
+    });
+
+    console.log("🔍 Sending approve transaction...");
+    const approveHash = await walletClient.sendTransaction({
+      to: params.assetToken,
+      data: approveData,
+    });
+
+    console.log("🔍 Approve transaction hash:", approveHash);
+    const approveReceipt = await publicClient.waitForTransactionReceipt({ hash: approveHash });
+    console.log("✅ Asset token approved successfully:", approveReceipt);
+
+    // Step 2: Create deal
+    console.log("🔍 Step 2: Creating deal...");
     const data = encodeFunctionData({
       abi: BlindEscrowABI.abi as any,
       functionName: "createDealWithAsk",
       args: [
+        "0x0000000000000000000000000000000000000000", // buyer (0x0 for OPEN mode)
+        1, // mode (1 = OPEN, 0 = P2P)
         params.assetToken,
         BigInt(params.assetAmountRaw),
         params.payToken,
@@ -183,6 +236,7 @@ export function useFhevm() {
 
   const revealAndDecrypt = useCallback(async (dealId: bigint) => {
     if (!publicClient) throw new Error('Public client not available');
+    if (!walletClient || !address) throw new Error('Wallet not connected');
 
     console.log("🔍 Attempting to reveal deal:", dealId);
 
@@ -212,6 +266,53 @@ export function useFhevm() {
         }
       }
       console.log("✅ Deal state check passed, proceeding with reveal");
+      
+      // Check if deal has ask, bid, and threshold
+      console.log("🔍 Checking deal requirements (ask, bid, threshold)...");
+      
+      // Get deal info using the same method as below
+      const dealInfoData = encodeFunctionData({
+        abi: BlindEscrowABI.abi as any,
+        functionName: "getDealInfo",
+        args: [dealId]
+      });
+
+      const dealInfoResult = await publicClient.call({
+        to: BLIND_ESCROW_ADDR as `0x${string}`,
+        data: dealInfoData,
+      });
+
+      if (!dealInfoResult.data) {
+        throw new Error(`Failed to get deal info for deal ${dealId}`);
+      }
+
+      const dealInfoDecoded = decodeFunctionResult({
+        abi: BlindEscrowABI.abi as any,
+        functionName: "getDealInfo",
+        data: dealInfoResult.data,
+      });
+
+      console.log("🔍 Deal info decoded:", dealInfoDecoded);
+      
+      // Check if deal has ask, bid, and threshold
+      // DealInfo structure: [id, seller, buyer, assetToken, assetAmount, payToken, askAmount, bidAmount, threshold, state, mode]
+      const hasAsk = Array.isArray(dealInfoDecoded) ? dealInfoDecoded[6] !== BigInt(0) : (dealInfoDecoded as any).askAmount !== BigInt(0);
+      const hasBid = Array.isArray(dealInfoDecoded) ? dealInfoDecoded[7] !== BigInt(0) : (dealInfoDecoded as any).bidAmount !== BigInt(0);
+      const hasThreshold = Array.isArray(dealInfoDecoded) ? dealInfoDecoded[8] !== BigInt(0) : (dealInfoDecoded as any).threshold !== BigInt(0);
+      
+      console.log("🔍 Deal components check:", { hasAsk, hasBid, hasThreshold });
+      
+      if (!hasAsk) {
+        throw new Error(`Deal ${dealId} does not have ask price. Cannot reveal.`);
+      }
+      if (!hasBid) {
+        throw new Error(`Deal ${dealId} does not have bid price. Cannot reveal.`);
+      }
+      if (!hasThreshold) {
+        throw new Error(`Deal ${dealId} does not have threshold. Cannot reveal.`);
+      }
+      
+      console.log("✅ Deal has all required components (ask, bid, threshold)");
     } catch (error) {
       console.error("❌ Failed to check deal state:", error);
       throw error;
@@ -260,30 +361,64 @@ export function useFhevm() {
             mode
           });
           
-          // Try to decrypt encrypted values
+          // Try to decrypt encrypted values using advanced approach
           try {
-            console.log("🔍 Attempting to decrypt encrypted values...");
+            console.log("🔍 Attempting to decrypt encrypted values with signature...");
             const inst = await getRelayerInstance();
             
+            if (walletClient && address) {
+              // Create ethers.Signer from wagmi walletClient
+              const ethersSigner = createEthersSigner(walletClient, address);
+              
+              // Create FhevmDecryptionSignature
+              const sig = await FhevmDecryptionSignature.loadOrSign(
+                inst,
+                [BLIND_ESCROW_ADDR as `0x${string}`],
+                ethersSigner,
+                storage
+              );
+
+              if (sig) {
             // Try to decrypt askAmount (should be encrypted)
             if (askAmount && typeof askAmount === 'string' && askAmount.startsWith('0x')) {
-              console.log("🔍 Decrypting askAmount:", askAmount);
-              const askDecrypted = await inst.decrypt(askAmount, address);
-              console.log("🔍 Decrypted askAmount:", askDecrypted);
+                  console.log("🔍 Decrypting askAmount with signature-based userDecrypt:", askAmount);
+                  try {
+                    // Try simple userDecrypt (no signature required)
+                    const res = await inst.userDecrypt(askAmount);
+                    console.log("🔍 Decrypted askAmount:", res[askAmount]);
+                  } catch (e) {
+                    console.warn("⚠️ Failed to decrypt askAmount:", e);
+                  }
             }
             
             // Try to decrypt bidAmount (should be encrypted)
             if (bidAmount && typeof bidAmount === 'string' && bidAmount.startsWith('0x')) {
-              console.log("🔍 Decrypting bidAmount:", bidAmount);
-              const bidDecrypted = await inst.decrypt(bidAmount, address);
-              console.log("🔍 Decrypted bidAmount:", bidDecrypted);
+                  console.log("🔍 Decrypting bidAmount with signature-based userDecrypt:", bidAmount);
+                  try {
+                    // Try simple userDecrypt (no signature required)
+                    const res = await inst.userDecrypt(bidAmount);
+                    console.log("🔍 Decrypted bidAmount:", res[bidAmount]);
+                  } catch (e) {
+                    console.warn("⚠️ Failed to decrypt bidAmount:", e);
+                  }
             }
             
             // Try to decrypt threshold (should be encrypted)
             if (threshold && typeof threshold === 'string' && threshold.startsWith('0x')) {
-              console.log("🔍 Decrypting threshold:", threshold);
-              const thresholdDecrypted = await inst.decrypt(threshold, address);
-              console.log("🔍 Decrypted threshold:", thresholdDecrypted);
+                  console.log("🔍 Decrypting threshold with signature-based userDecrypt:", threshold);
+                  try {
+                    // Try simple userDecrypt (no signature required)
+                    const res = await inst.userDecrypt(threshold);
+                    console.log("🔍 Decrypted threshold:", res[threshold]);
+                  } catch (e) {
+                    console.warn("⚠️ Failed to decrypt threshold:", e);
+                  }
+                }
+              } else {
+                console.warn("⚠️ Failed to create decryption signature");
+              }
+            } else {
+              console.warn("⚠️ No wallet client or address available for signature creation");
             }
           } catch (decryptError) {
             console.warn("⚠️ Failed to decrypt values:", decryptError);
@@ -404,46 +539,71 @@ export function useFhevm() {
           let bidDecrypted = null;
           let thresholdDecrypted = null;
           
+          // Try to decrypt using advanced approach with signature
+          console.log("🔍 Attempting advanced decryption with signature...");
+          
+          if (walletClient && address) {
+            try {
+              // Create ethers.Signer from wagmi walletClient
+              const ethersSigner = createEthersSigner(walletClient, address);
+              
+              // Create FhevmDecryptionSignature
+              const sig = await FhevmDecryptionSignature.loadOrSign(
+                inst,
+                [BLIND_ESCROW_ADDR as `0x${string}`],
+                ethersSigner,
+                storage
+              );
+
+              if (!sig) {
+                console.warn("⚠️ Failed to create decryption signature");
+              } else {
+                console.log("✅ Created decryption signature, attempting decryption...");
+          
           // Try to decrypt ask
-          console.log("🔍 Checking ask for decryption...");
           if (askDecoded && typeof askDecoded === 'string' && askDecoded.startsWith('0x')) {
-            console.log("🔍 Ask is valid hex string, attempting decryption...");
-                 try {
-                   askDecrypted = await inst.decrypt(askDecoded);
-                   console.log("✅ Offline decrypted ask:", askDecrypted);
+                  console.log("🔍 Decrypting ask with simple userDecrypt...");
+                  try {
+                    // Try simple userDecrypt (no signature required)
+                    const res = await inst.userDecrypt(askDecoded);
+                    askDecrypted = res[askDecoded];
+                    console.log("✅ Signature-based decrypted ask:", askDecrypted);
                  } catch (e) {
-                   console.warn("⚠️ Failed to decrypt ask:", e);
+                    console.warn("⚠️ Failed to decrypt ask with signature-based userDecrypt:", e);
                  }
-          } else {
-            console.log("🔍 Ask is not valid for decryption:", { askDecoded, type: typeof askDecoded, isString: typeof askDecoded === 'string', startsWith0x: askDecoded && typeof askDecoded === 'string' && askDecoded.startsWith('0x') });
           }
           
           // Try to decrypt bid
-          console.log("🔍 Checking bid for decryption...");
           if (bidDecoded && typeof bidDecoded === 'string' && bidDecoded.startsWith('0x')) {
-            console.log("🔍 Bid is valid hex string, attempting decryption...");
-                 try {
-                   bidDecrypted = await inst.decrypt(bidDecoded);
-                   console.log("✅ Offline decrypted bid:", bidDecrypted);
+                  console.log("🔍 Decrypting bid with simple userDecrypt...");
+                  try {
+                    // Try simple userDecrypt (no signature required)
+                    const res = await inst.userDecrypt(bidDecoded);
+                    bidDecrypted = res[bidDecoded];
+                    console.log("✅ Signature-based decrypted bid:", bidDecrypted);
                  } catch (e) {
-                   console.warn("⚠️ Failed to decrypt bid:", e);
+                    console.warn("⚠️ Failed to decrypt bid with signature-based userDecrypt:", e);
                  }
-          } else {
-            console.log("🔍 Bid is not valid for decryption:", { bidDecoded, type: typeof bidDecoded, isString: typeof bidDecoded === 'string', startsWith0x: bidDecoded && typeof bidDecoded === 'string' && bidDecoded.startsWith('0x') });
           }
           
           // Try to decrypt threshold
-          console.log("🔍 Checking threshold for decryption...");
           if (thresholdDecoded && typeof thresholdDecoded === 'string' && thresholdDecoded.startsWith('0x')) {
-            console.log("🔍 Threshold is valid hex string, attempting decryption...");
-                 try {
-                   thresholdDecrypted = await inst.decrypt(thresholdDecoded);
-                   console.log("✅ Offline decrypted threshold:", thresholdDecrypted);
+                  console.log("🔍 Decrypting threshold with simple userDecrypt...");
+                  try {
+                    // Try simple userDecrypt (no signature required)
+                    const res = await inst.userDecrypt(thresholdDecoded);
+                    thresholdDecrypted = res[thresholdDecoded];
+                    console.log("✅ Signature-based decrypted threshold:", thresholdDecrypted);
                  } catch (e) {
-                   console.warn("⚠️ Failed to decrypt threshold:", e);
+                    console.warn("⚠️ Failed to decrypt threshold with signature-based userDecrypt:", e);
+                  }
+                }
+              }
+            } catch (signatureError) {
+              console.warn("⚠️ Failed to create signature for decryption:", signatureError);
                  }
           } else {
-            console.log("🔍 Threshold is not valid for decryption:", { thresholdDecoded, type: typeof thresholdDecoded, isString: typeof thresholdDecoded === 'string', startsWith0x: thresholdDecoded && typeof thresholdDecoded === 'string' && thresholdDecoded.startsWith('0x') });
+            console.warn("⚠️ No wallet client or address available for signature creation");
           }
           
           // Check if we can determine match offline
@@ -507,7 +667,197 @@ export function useFhevm() {
     const thPlain = 50;   // Mock value
     
     return { matched, askPlain, bidPlain, thPlain };
-  }, [publicClient, checkDealState, address]);
+  }, [publicClient, checkDealState, address, walletClient, ready]);
+
+  const grantDecryptPermission = useCallback(async (dealId: bigint, userAddress: `0x${string}`) => {
+    if (!ready) throw new Error('FHE relayer not ready');
+    if (!walletClient || !address) throw new Error('Wallet not connected');
+    if (!publicClient) throw new Error('Public client not available');
+
+    console.log("🔍 Granting decrypt permission for deal:", dealId, "to user:", userAddress);
+
+    // Guard: Check if function exists in ABI
+    try {
+      const fn = getAbiItem({ abi: BlindEscrowABI.abi as any, name: "grantDecryptPermission" });
+      if (!fn) {
+        console.warn("⚠️ grantDecryptPermission không có trong ABI đang dùng → skip");
+        return { skipped: true };
+      }
+      console.log("✅ Function grantDecryptPermission found in ABI");
+    } catch (error) {
+      console.warn("⚠️ Error checking ABI for grantDecryptPermission:", error);
+      return { skipped: true };
+    }
+
+    try {
+      const data = encodeFunctionData({
+        abi: BlindEscrowABI.abi as any,
+        functionName: "grantDecryptPermission",
+        args: [dealId, userAddress]
+      });
+
+      console.log("🔍 Calling grantDecryptPermission with data:", data);
+
+      const hash = await walletClient.sendTransaction({
+        to: BLIND_ESCROW_ADDR as `0x${string}`,
+        data,
+      });
+
+      console.log("🔍 Transaction hash:", hash);
+
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      console.log("✅ Decrypt permission granted successfully:", receipt);
+
+      return receipt;
+    } catch (error) {
+      console.error("❌ Failed to grant decrypt permission:", error);
+      throw error;
+    }
+  }, [ready, walletClient, address, publicClient]);
+
+  // Test function: chỉ decrypt bid
+  const testDecryptBid = useCallback(async (dealId: bigint) => {
+    if (!ready) throw new Error('FHE relayer not ready');
+    if (!publicClient) throw new Error('Public client not available');
+
+    console.log("🧪 Testing bid decryption for deal:", dealId);
+
+    try {
+      // Get relayer instance
+      const inst = await getRelayerInstance();
+      console.log("✅ Got relayer instance for bid decryption test");
+
+      // Get encrypted bid
+      console.log("🔍 Getting encrypted bid...");
+      const bidData = encodeFunctionData({
+        abi: BlindEscrowABI.abi as any,
+        functionName: "getEncryptedBid",
+        args: [dealId]
+      });
+
+      const bidResult = await publicClient.call({
+        to: BLIND_ESCROW_ADDR as `0x${string}`,
+        data: bidData,
+      });
+
+      if (!bidResult.data) {
+        throw new Error(`Failed to get encrypted bid for deal ${dealId}`);
+      }
+
+      const bidDecoded = decodeFunctionResult({
+        abi: BlindEscrowABI.abi as any,
+        functionName: "getEncryptedBid",
+        data: bidResult.data,
+      });
+
+      console.log("🔍 Encrypted bid:", bidDecoded);
+
+      if (bidDecoded && typeof bidDecoded === 'string' && bidDecoded.startsWith('0x')) {
+        console.log("🔍 Attempting to decrypt bid with signature...");
+        
+        // Create signature for decryption
+        if (walletClient && address) {
+          try {
+            const ethersSigner = createEthersSigner(walletClient, address);
+            const sig = await FhevmDecryptionSignature.loadOrSign(
+              inst,
+              [BLIND_ESCROW_ADDR as `0x${string}`],
+              ethersSigner,
+              storage
+            );
+            
+            console.log("✅ Created decryption signature for bid test");
+            
+            if (sig) {
+              try {
+                const res = await inst.userDecrypt(
+                  [{ handle: bidDecoded, contractAddress: BLIND_ESCROW_ADDR as `0x${string}` }],
+                  sig.privateKey,
+                  sig.publicKey,
+                  sig.signature,
+                  sig.contractAddresses,
+                  sig.userAddress,
+                  sig.startTimestamp,
+                  sig.durationDays
+                );
+                const decryptedBid = res[bidDecoded];
+                console.log("✅ Successfully decrypted bid with signature:", decryptedBid);
+                return { success: true, bid: decryptedBid };
+              } catch (e) {
+                console.error("❌ Failed to decrypt bid with signature:", e);
+                return { success: false, error: e instanceof Error ? e.message : String(e) };
+              }
+            } else {
+              console.error("❌ Failed to create signature - returned null");
+              return { success: false, error: "Failed to create signature" };
+            }
+          } catch (sigError) {
+            console.error("❌ Failed to create signature for bid test:", sigError);
+            return { success: false, error: `Signature creation failed: ${sigError instanceof Error ? sigError.message : String(sigError)}` };
+          }
+        } else {
+          console.error("❌ No wallet client or address available for signature creation");
+          return { success: false, error: "No wallet client or address available" };
+        }
+      } else {
+        console.log("ℹ️ No encrypted bid found or invalid format");
+        return { success: false, error: "No encrypted bid found" };
+      }
+    } catch (error) {
+      console.error("❌ Test decrypt bid failed:", error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  }, [ready, publicClient, walletClient, address, chainId]);
+
+  // Grant permissions function
+  const grantDecryptTo = useCallback(async ({
+    relayer,
+    ownerSigner,
+    handles,
+    grantee,
+  }: {
+    relayer: any;
+    ownerSigner: ethers.Signer;
+    handles: string[];
+    grantee: `0x${string}`;
+  }) => {
+    const { chainId } = await ownerSigner.provider!.getNetwork();
+    const owner = await ownerSigner.getAddress();
+    const msg = `FHE-GRANT:${chainId}:${owner.toLowerCase()}:${grantee.toLowerCase()}:${Date.now()}`;
+    const signature = await ownerSigner.signMessage(msg);
+
+    console.log("🔍 Granting permissions:", { handles, grantee, owner, chainId });
+    console.log("🔍 Available relayer methods:", Object.getOwnPropertyNames(relayer));
+    console.log("🔍 Relayer prototype methods:", Object.getOwnPropertyNames(Object.getPrototypeOf(relayer)));
+
+    // Try different grant methods based on SDK version
+    if (typeof relayer.grantPermissions === "function") {
+      console.log("🔍 Using grantPermissions method");
+      return relayer.grantPermissions({ handles, to: grantee, signature });
+    }
+    if (typeof relayer.share === "function") {
+      console.log("🔍 Using share method");
+      return relayer.share({ handles, to: grantee, signature });
+    }
+    if (typeof relayer.authorizeUserDecrypt === "function") {
+      console.log("🔍 Using authorizeUserDecrypt method");
+      return relayer.authorizeUserDecrypt({ handles, grantee, signature });
+    }
+    
+    // Check for other possible methods
+    if (typeof relayer.allow === "function") {
+      console.log("🔍 Using allow method");
+      return relayer.allow({ handles, to: grantee, signature });
+    }
+    if (typeof relayer.grant === "function") {
+      console.log("🔍 Using grant method");
+      return relayer.grant({ handles, to: grantee, signature });
+    }
+    
+    console.log("❌ No grant methods found. Available methods:", Object.keys(relayer));
+    console.log("ℹ️ FHEVM SDK không có grant methods. Sẽ skip SDK grant và dùng on-chain grant.");
+    return { skipped: true, reason: "No SDK grant methods available" };
+  }, []);
 
   return {
     fheReady: ready,
@@ -515,5 +865,7 @@ export function useFhevm() {
     createOpenWithAsk,
     submitBid,
     revealAndDecrypt,
+    grantDecryptPermission,
+    grantDecryptTo,
   };
 }

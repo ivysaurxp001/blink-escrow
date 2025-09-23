@@ -440,5 +440,30 @@ contract BlindEscrow is Ownable {
         d.state = DealState.Canceled;
         emit Canceled(dealId);
     }
+
+    /**
+     * @dev Grant decrypt permission to a user for all encrypted values in a deal
+     * Only seller or buyer can grant permissions
+     */
+    function grantDecryptPermission(uint256 dealId, address user) external {
+        Deal storage d = deals[dealId];
+        require(msg.sender == d.seller || msg.sender == d.buyer, "not authorized");
+        require(user != address(0), "invalid user");
+
+        // Grant permission for encrypted ask
+        if (d.hasAsk) {
+            FHE.allow(d.encAsk, user);
+        }
+        
+        // Grant permission for encrypted bid
+        if (d.hasBid) {
+            FHE.allow(d.encBid, user);
+        }
+        
+        // Grant permission for encrypted threshold
+        if (d.hasEncThreshold) {
+            FHE.allow(d.encThreshold, user);
+        }
+    }
 }
 

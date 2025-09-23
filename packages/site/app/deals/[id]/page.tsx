@@ -12,8 +12,24 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useRole } from '@/hooks/useRole';
-import { useAccount } from 'wagmi';
+import { useAccount, useWalletClient, usePublicClient } from 'wagmi';
+import { ethers } from 'ethers';
+import { getRelayerInstance } from '@/fhevm/relayer';
 import { DEAL_STATE_LABELS } from '@/config/constants';
+
+// Create ethers signer from wagmi walletClient
+function createEthersSigner(walletClient: any, address: string): ethers.Signer {
+  return {
+    getAddress: async () => address,
+    signMessage: async (message: string) => {
+      const signature = await walletClient.signMessage({ message });
+      return signature;
+    },
+    provider: {
+      getNetwork: async () => ({ chainId: 11155111 }) // Sepolia
+    }
+  } as unknown as ethers.Signer;
+}
 
 // Function to get token name from address
 function getTokenName(address: string): string {
@@ -28,7 +44,9 @@ export default function DealDetailPage() {
   const params = useParams();
   const dealId = parseInt(params.id as string);
   const { address } = useAccount();
-  const { submitBidToDeal, revealMatchAndDecrypt } = useBlindEscrow();
+  const { data: walletClient } = useWalletClient();
+  const publicClient = usePublicClient();
+  const { submitBidToDeal, revealMatchAndDecrypt, grantDecryptPermission, grantDecryptTo } = useBlindEscrow();
   const { getDeal } = useDealsQuery();
   const { getDealValues } = useDealValues();
   
@@ -47,15 +65,15 @@ export default function DealDetailPage() {
         console.log('🔍 Deal loaded successfully:', dealData);
         console.log('🔍 Deal debug info:', {
           dealId,
-          seller: dealData.seller,
-          buyer: dealData.buyer,
+          seller: dealData?.seller,
+          buyer: dealData?.buyer,
           currentAddress: address,
-          isSeller: address && dealData.seller.toLowerCase() === address.toLowerCase(),
-          isBuyer: address && dealData.buyer.toLowerCase() === address.toLowerCase(),
-          dealMode: dealData.mode,
-          dealState: dealData.state,
-          isP2P: dealData.mode === 0,
-          isOPEN: dealData.mode === 1
+          isSeller: address && dealData?.seller.toLowerCase() === address.toLowerCase(),
+          isBuyer: address && dealData?.buyer.toLowerCase() === address.toLowerCase(),
+          dealMode: dealData?.mode,
+          dealState: dealData?.state,
+          isP2P: dealData?.mode === 0,
+          isOPEN: dealData?.mode === 1
         });
         setDeal(dealData);
       } catch (err) {
@@ -126,8 +144,9 @@ export default function DealDetailPage() {
     }
   };
 
+
   const handleRevealAndBind = async () => {
-    if (!deal) return;
+    if (!deal || !walletClient || !address || !publicClient) return;
     
     try {
       setActionLoading('reveal');
@@ -136,6 +155,11 @@ export default function DealDetailPage() {
       const storedValues = getDealValues(deal.id);
       console.log("🔍 Stored values before reveal:", storedValues);
       
+      // Step 1: Skip grant permissions for now and try direct decrypt
+      console.log("🔍 Step 1: Skipping grant permissions, trying direct decrypt...");
+      
+      // Step 2: Now attempt reveal and decrypt directly
+      console.log("🔍 Step 2: Attempting reveal and decrypt...");
       const result = await revealMatchAndDecrypt(deal.id);
       
       if (!result.matched) {
@@ -364,7 +388,7 @@ export default function DealDetailPage() {
                   )}
 
                   {/* P2P Buyer Actions - After Bid Submitted */}
-                  {isBuyer && (deal.state === DealState.B_Submitted || deal.state === 3) && (
+                  {isBuyer && (deal.state === DealState.B_Submitted || deal.state === DealState.A_Submitted) && (
                     <div className="mt-4">
                       <p className="text-sm text-gray-300 mb-4 bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-400/20 p-3 rounded-lg backdrop-blur-sm">
                         ✅ Your bid has been submitted! You can now reveal and bind the deal.
@@ -383,7 +407,7 @@ export default function DealDetailPage() {
                   )}
 
                   {/* P2P Ready State - Reveal & Bind */}
-                  {isBuyer && (deal.state === DealState.Ready || deal.state === 4) && (
+                  {isBuyer && (deal.state === DealState.Ready || deal.state === DealState.A_Submitted) && (
                     <div className="mt-4">
                       <p className="text-sm text-gray-300 mb-4 bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-400/20 p-3 rounded-lg backdrop-blur-sm">
                         🎯 Deal is ready! You can now reveal and bind the deal to check if it matches.
@@ -437,6 +461,7 @@ export default function DealDetailPage() {
                   >
                     {actionLoading === 'reveal' ? 'Revealing...' : 'Reveal & Bind (DEBUG)'}
                   </Button>
+                  
                   <p className="text-xs text-gray-400 mt-3 text-center bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-400/20 p-2 rounded-lg backdrop-blur-sm">
                     After reveal, if matched = true, you can settle. If matched = false, deal will be unsuccessful.
                   </p>

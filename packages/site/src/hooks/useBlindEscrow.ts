@@ -12,7 +12,7 @@ export function useBlindEscrow() {
   const { address } = useAccount();
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
-  const { fheReady, fheError, createOpenWithAsk, submitBid, revealAndDecrypt } = useFhevm();
+  const { fheReady, fheError, createOpenWithAsk, submitBid, revealAndDecrypt, grantDecryptPermission, grantDecryptTo } = useFhevm();
   const { getDealValues, setDealAsk, setDealBid, setDealThreshold } = useDealValues();
 
   // Create OPEN deal with ask and threshold (using new FHE implementation)
@@ -139,6 +139,8 @@ export function useBlindEscrow() {
     createOpenWithAskThreshold,
     submitBidToDeal,
     revealMatchAndDecrypt,
+    grantDecryptPermission,
+    grantDecryptTo,
     
     // Legacy functions
     createOpenDeal,
