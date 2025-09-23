@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   // experimental: { esmExternals: 'loose' }, // Removed - not recommended in Next.js 15
-  transpilePackages: ['@zama-fhe/relayer-sdk'],
+  // transpilePackages: ['@zama-fhe/relayer-sdk'], // Removed - using CDN approach
   onDemandEntries: { maxInactiveAge: 60 * 1000, pagesBufferLength: 2 }, // giảm nóng
   webpack: (config, { isServer }) => {
     // Polyfill global for browser environment

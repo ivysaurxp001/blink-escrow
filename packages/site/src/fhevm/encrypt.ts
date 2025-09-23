@@ -10,10 +10,10 @@ export async function encrypt32Single(
   value: number | bigint
 ) {
   const inst = await getRelayerInstance();
-  const buf = inst.createEncryptedInput(contractAddress, userAddress);
-  buf.add32(Number(value)); // nếu contract dùng euint64, đổi .add64
-  const { handles, inputProof } = await buf.encrypt();
-  return { input: handles[0], proof: inputProof };
+  const input = inst.createEncryptedInput(contractAddress, userAddress);
+  input.add32(Number(value)); // nếu contract dùng euint64, đổi .add64
+  const enc = await input.encrypt();
+  return { input: enc.handles[0], proof: enc.inputProof };
 }
 
 // Encrypt batch cho ask + threshold → 2 handles + 1 proof
@@ -23,14 +23,24 @@ export async function encryptAskThresholdBatch(
   ask: number | bigint,
   threshold: number | bigint
 ) {
+  console.log("🔐 Encrypting ask and threshold values...");
+  
+  // Validate addresses before calling createEncryptedInput
+  if (!contractAddress || contractAddress === "" || !contractAddress.startsWith("0x")) {
+    throw new Error(`Invalid contract address: ${contractAddress}`);
+  }
+  if (!userAddress || userAddress === "" || !userAddress.startsWith("0x")) {
+    throw new Error(`Invalid user address: ${userAddress}`);
+  }
+  
   const inst = await getRelayerInstance();
-  const buf = inst.createEncryptedInput(contractAddress, userAddress);
-  buf.add32(Number(ask));
-  buf.add32(Number(threshold));
-  const { handles, inputProof } = await buf.encrypt();
+  const input = inst.createEncryptedInput(contractAddress, userAddress);
+  input.add32(Number(ask));
+  input.add32(Number(threshold));
+  const enc = await input.encrypt();
   return {
-    askHandle: handles[0],
-    thresholdHandle: handles[1],
-    inputProof,
+    askHandle: enc.handles[0],
+    thresholdHandle: enc.handles[1],
+    inputProof: enc.inputProof,
   };
 }

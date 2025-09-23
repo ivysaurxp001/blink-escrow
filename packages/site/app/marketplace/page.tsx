@@ -27,7 +27,7 @@ export default function MarketplacePage() {
   });
   
   // Fetch all deals for stats (no pagination, newest first)
-  const { openDeals: allDeals, loading: statsLoading } = useDealsQuery({ 
+  const { openDeals: allDeals, loading: statsLoading, refetch: refetchStats } = useDealsQuery({ 
     limit: 1000, // Get all deals for stats
     offset: 0
   });
@@ -39,7 +39,8 @@ export default function MarketplacePage() {
     offset: (currentPage - 1) * dealsPerPage,
     totalDeals,
     dealsCount: openDeals.length,
-    allDealsCount: allDeals.length
+    allDealsCount: allDeals.length,
+    openDeals: openDeals.map(d => ({ id: d.id, seller: d.seller, mode: d.mode, state: d.state }))
   });
   const { createOpenWithAskThreshold } = useBlindEscrow();
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -97,7 +98,28 @@ export default function MarketplacePage() {
         setCurrentStep("");
       }, 3000);
       
-      refetch();
+      // Also refresh after a short delay to ensure blockchain state is updated
+      setTimeout(async () => {
+        console.log("🔄 Delayed refresh to ensure blockchain state is updated...");
+        await refetch();
+        await refetchStats();
+      }, 2000);
+      
+      // Force refresh one more time after 5 seconds
+      setTimeout(async () => {
+        console.log("🔄 Final refresh to ensure deal is visible...");
+        await refetch();
+        await refetchStats();
+      }, 5000);
+      
+      // Reset to page 1 to show newest deals
+      setCurrentPage(1);
+      
+      // Refresh both paginated deals and stats
+      console.log("🔄 Refreshing deals after creation...");
+      await refetch();
+      await refetchStats();
+      console.log("✅ Deals refreshed successfully");
     } catch (error) {
       console.error("❌ Create open deal error:", error);
       setCurrentStep("Transaction failed. Please try again.");
